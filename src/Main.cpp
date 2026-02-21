@@ -54,7 +54,6 @@ static auto UpdateApplicationRefreshRate() -> void
 {
     try {
         auto hmd_properties = VrTrackedDeviceProperties::FromDeviceIndex(vr::k_unTrackedDeviceIndex_Hmd);
-        hmd_properties.CheckConnection();
         g_hmd_refresh_rate = hmd_properties.GetFloat(vr::Prop_DisplayFrequency_Float);
         g_processInformation->SetFrameTime(g_hmd_refresh_rate);
     }
