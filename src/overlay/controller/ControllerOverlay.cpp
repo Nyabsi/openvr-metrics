@@ -1153,9 +1153,10 @@ auto ControllerOverlay::Reset() -> void
 {
     cpu_frame_times_.resize(static_cast<int>(refresh_rate_));
     gpu_frame_times_.resize(static_cast<int>(refresh_rate_));
+    
+    std::fill(cpu_frame_times_.begin(), cpu_frame_times_.end(), FrameTimeInfo{});
+    std::fill(gpu_frame_times_.begin(), gpu_frame_times_.end(), FrameTimeInfo{});
 
-    cpu_frame_times_.clear();
-    gpu_frame_times_.clear();
     performance_alerts_.clear();
 
     frame_index_ = 0;
