@@ -321,6 +321,8 @@ auto ControllerOverlay::Render() -> bool
                 ImGui::TableSetColumnIndex(1);
                 if ((gpu_frame_times_[frame_index_].flags & FrameTimeInfo_Flags_Reprojecting))
                     ImGui::TextColored(Color_Orange, "%1.f", current_fps_);
+                else if ((gpu_frame_times_[frame_index_].flags & FrameTimeInfo_Flags_OneThirdFramePresented))
+                    ImGui::TextColored(Color_Red, "%1.f", current_fps_);
                 else
                     ImGui::Text("%1.f", current_fps_);
 
@@ -412,8 +414,6 @@ auto ControllerOverlay::Render() -> bool
                     ImGui::TextColored(Color_Orange, "%s", "CPU");
                 else if (bottleneck_flags_ & BottleneckSource_Flags_GPU)
                     ImGui::TextColored(Color_Orange, "%s", "GPU");
-                else if (bottleneck_flags_ & BottleneckSource_Flags_VRAM)
-                    ImGui::TextColored(Color_Orange, "%s", "VRAM");
                 else
                     ImGui::TextColored(Color_Green, "%s", "None");
 
@@ -998,8 +998,6 @@ auto ControllerOverlay::Update() -> void
         bottleneck_flags_ = stable_bottleneck_flags;
         bottleneck_ = (bottleneck_flags_ != BottleneckSource_Flags_None);
 
-        frame_index_ = (frame_index_ + 1) % static_cast<int>(refresh_rate_);
-
         uint64_t now_ms = SDL_GetTicks();
         if (!performance_alerts_.empty() && (now_ms - performance_alerts_.back().timestamp > (3600ULL * 1000ULL))) 
         {
@@ -1045,6 +1043,8 @@ auto ControllerOverlay::Update() -> void
             message = "The frame began rendering after its targeted CPU budget, but not late enough to result in a dropped frame. This occurs when the application exceeds its CPU frame budget but still fits within the ~3ms running-start buffer before vsync. It may also signal server-side frame pacing enforcement on certain streams (e.g. ALVR, PICO Connect).";
             alert_flags |= FrameTimeInfo_Flags_Frame_LateStart;
         }
+
+        frame_index_ = (frame_index_ + 1) % static_cast<int>(refresh_rate_);
 
         if (!message.empty())
         {
