@@ -6,8 +6,8 @@
 ;--------------------------------
 ; General Configuration
 
-!define APP_VERSION "1.4.4"
-!define APP_VERSION_META "1.4.0.4"
+!define APP_VERSION "1.5.0"
+!define APP_VERSION_META "1.5.0.0"
 !define APP_NAME "OpenVR Metrics"
 
 !define INSTALL_DIR "$PROGRAMFILES64\${APP_NAME}"
@@ -102,7 +102,7 @@ Section "Install" SecInstall
 
     SetOutPath "$INSTDIR"
 
-    File "${FILES_DIR}\OpenVRMetrics.exe"
+    File "${FILES_DIR}\metrics_overlay.exe"
     File "${FILES_DIR}\openvr_api.dll"
     File "${FILES_DIR}\LICENSE.txt"
     File "${FILES_DIR}\manifest.vrmanifest"
@@ -115,7 +115,7 @@ Section "Install" SecInstall
     WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_NAME}" "DisplayName" "${APP_NAME}"
     WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_NAME}" "UninstallString" "$\"$INSTDIR\Uninstall.exe$\""
 
-    CreateShortCut "$SMPROGRAMS\${APP_NAME}.lnk" "$INSTDIR\OpenVRMetrics.exe"
+    CreateShortCut "$SMPROGRAMS\${APP_NAME}.lnk" "$INSTDIR\metrics_overlay.exe"
 
 SectionEnd
 
@@ -126,7 +126,7 @@ Section "Uninstall"
 
     SetOutPath "$INSTDIR"
 
-    Delete "$INSTDIR\OpenVRMetrics.exe"
+    Delete "$INSTDIR\metrics_overlay.exe"
     Delete "$INSTDIR\openvr_api.dll"
     Delete "$INSTDIR\LICENSE.txt"
     Delete "$INSTDIR\manifest.vrmanifest"
