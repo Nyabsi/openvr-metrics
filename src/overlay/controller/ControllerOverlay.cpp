@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <map>
 #include <thread>
+#include <ranges>
 #include <math.h>
 
 #include <imgui.h>
@@ -42,6 +43,7 @@ ControllerOverlay::ControllerOverlay() : Overlay(OVERLAY_KEY, OVERLAY_NAME, vr::
     total_predicted_frames_ = {};
     total_throttled_frames_ = {};
     cpu_frame_time_ms_ = {};
+    effective_cpu_frame_time_ms_ = {};
     gpu_frame_time_ms_ = {};
 	cpu_frame_time_sample_ = {};
 	gpu_frame_time_avg_ = {};
@@ -58,6 +60,8 @@ ControllerOverlay::ControllerOverlay() : Overlay(OVERLAY_KEY, OVERLAY_NAME, vr::
     color_temp_ = {};
     color_brightness_ = {};
     colour_mask_ = {};
+    gpu_info_ = {};
+    process_info_ = {};
 
     try {
         this->SetInputMethod(vr::VROverlayInputMethod_Mouse);
@@ -130,9 +134,6 @@ auto ControllerOverlay::Render() -> bool
     ) {
         ImGuiStyle& style = ImGui::GetStyle();
 
-        GpuInfo gpu_info = {};
-		ProcessInfo process_info = {};
-
         ImGui::Indent(10.0f);
         uint32_t pid = GetCurrentGamePid();
         if (pid > 0) {
@@ -141,9 +142,9 @@ auto ControllerOverlay::Render() -> bool
                 this->Reset();
                 last_pid = pid;
             }
-			process_info = task_monitor_.GetProcessInfoByPid(pid);
-            gpu_info = getCurrentlyUsedGpu(process_info);
-            ImGui::Text("Current Application: %s (%d)", process_info.process_name.c_str(), pid);
+			process_info_ = task_monitor_.GetProcessInfoByPid(pid);
+            gpu_info_ = getCurrentlyUsedGpu(process_info_);
+            ImGui::Text("Current Application: %s (%d)", process_info_.process_name.c_str(), pid);
         }
         else {
 			ImGui::Text("Current Application: SteamVR Void");
@@ -182,8 +183,8 @@ auto ControllerOverlay::Render() -> bool
                 ImPlot::SetupAxes(
                     nullptr,
                     nullptr,
-                    ImPlotAxisFlags_AutoFit | ImPlotAxisFlags_NoLabel | ImPlotAxisFlags_NoTickMarks | ImPlotAxisFlags_NoTickLabels | ImPlotAxisFlags_NoMenus | ImPlotAxisFlags_NoHighlight | ImPlotAxisFlags_NoSideSwitch | ImPlotAxisFlags_NoGridLines,
-                    ImPlotAxisFlags_AutoFit | ImPlotAxisFlags_NoLabel | ImPlotAxisFlags_NoTickMarks | ImPlotAxisFlags_NoTickLabels | ImPlotAxisFlags_NoMenus | ImPlotAxisFlags_NoHighlight | ImPlotAxisFlags_NoSideSwitch | ImPlotAxisFlags_Lock
+                    ImPlotAxisFlags_AutoFit | ImPlotAxisFlags_NoTickMarks | ImPlotAxisFlags_NoTickLabels | ImPlotAxisFlags_NoMenus | ImPlotAxisFlags_NoHighlight | ImPlotAxisFlags_NoSideSwitch | ImPlotAxisFlags_NoGridLines,
+                    ImPlotAxisFlags_AutoFit | ImPlotAxisFlags_NoTickMarks | ImPlotAxisFlags_NoTickLabels | ImPlotAxisFlags_NoMenus | ImPlotAxisFlags_NoHighlight | ImPlotAxisFlags_NoSideSwitch | ImPlotAxisFlags_Lock
                 );
 
                 // HACK: frame_dt * 2.0f ensures history buffer is enough to fill the entire plot
@@ -201,6 +202,8 @@ auto ControllerOverlay::Render() -> bool
                     else if (cpu_frame_times_[i].flags & FrameTimeInfo_Flags_MotionSmoothingEnabled)
                         color = Color_Yellow;
                     else if (cpu_frame_times_[i].flags & FrameTimeInfo_Flags_OneThirdFramePresented)
+                        color = Color_Red;
+                    else if (cpu_frame_times_[i].flags & FrameTimeInfo_Flags_Frame_LateStart)
                         color = Color_Red;
                     else if (cpu_frame_times_[i].flags & FrameTimeInfo_Flags_Frame_Dropped)
                         color = Color_Magenta;
@@ -310,13 +313,13 @@ auto ControllerOverlay::Render() -> bool
                 ImGui::TableSetColumnIndex(0);
                 ImGui::Text("CPU");
                 ImGui::TableSetColumnIndex(1);
-                ImGui::Text("%.1f %%", process_info.cpu.total_cpu_usage);
+                ImGui::Text("%.1f %%", process_info_.cpu.total_cpu_usage);
 
                 ImGui::TableNextRow();
                 ImGui::TableSetColumnIndex(0);
                 ImGui::Text("FPS");
                 ImGui::TableSetColumnIndex(1);
-                if (bottleneck_flags_ & BottleneckSource_Flags_GPU)
+                if ((gpu_frame_times_[frame_index_].flags & FrameTimeInfo_Flags_Reprojecting))
                     ImGui::TextColored(Color_Orange, "%1.f", current_fps_);
                 else
                     ImGui::Text("%1.f", current_fps_);
@@ -360,7 +363,7 @@ auto ControllerOverlay::Render() -> bool
                 ImGui::TableSetColumnIndex(0);
                 ImGui::Text("GPU");
                 ImGui::TableSetColumnIndex(1);
-                ImGui::Text("%.1f %%", gpuPercentage(gpu_info));
+                ImGui::Text("%.1f %%", gpuPercentage(gpu_info_));
 
                 ImGui::TableNextRow();
                 ImGui::TableSetColumnIndex(0);
@@ -368,9 +371,9 @@ auto ControllerOverlay::Render() -> bool
                 ImGui::TableSetColumnIndex(1);
                 ImGui::Text(
                     "%.0f MB (%.1f%%)",
-                    gpu_info.memory.dedicated_vram_usage / (1024.0f * 1024.0f),
-                    gpu_info.memory.dedicated_available > 0
-                    ? (gpu_info.memory.dedicated_vram_usage * 100.0f) / gpu_info.memory.dedicated_available
+                    gpu_info_.memory.dedicated_vram_usage / (1024.0f * 1024.0f),
+                    gpu_info_.memory.dedicated_available > 0
+                    ? (gpu_info_.memory.dedicated_vram_usage * 100.0f) / gpu_info_.memory.dedicated_available
                     : 0.0f
                 );
 
@@ -380,9 +383,9 @@ auto ControllerOverlay::Render() -> bool
                 ImGui::TableSetColumnIndex(1);
                 ImGui::Text(
                     "%.0f MB (%.1f%%)",
-                    gpu_info.memory.shared_vram_usage / (1024.0f * 1024.0f),
-                    gpu_info.memory.shared_available > 0
-                    ? (gpu_info.memory.shared_vram_usage * 100.0f) / gpu_info.memory.shared_available
+                    gpu_info_.memory.shared_vram_usage / (1024.0f * 1024.0f),
+                    gpu_info_.memory.shared_available > 0
+                    ? (gpu_info_.memory.shared_vram_usage * 100.0f) / gpu_info_.memory.shared_available
                     : 0.0f
                 );
 
@@ -392,9 +395,9 @@ auto ControllerOverlay::Render() -> bool
                 ImGui::TableSetColumnIndex(1);
                 ImGui::Text(
                     "%.0f MB (%.1f%%)",
-                    process_info.memory_usage / (1024.0f * 1024.0f),
-                    gpu_info.memory.dedicated_available > 0
-                    ? (process_info.memory_usage * 100.0f) / process_info.memory_available
+                    process_info_.memory_usage / (1024.0f * 1024.0f),
+                    gpu_info_.memory.dedicated_available > 0
+                    ? (process_info_.memory_usage * 100.0f) / process_info_.memory_available
                     : 0.0f
                 );
 
@@ -402,7 +405,18 @@ auto ControllerOverlay::Render() -> bool
                 ImGui::TableSetColumnIndex(0);
                 ImGui::Text("Bottleneck");
                 ImGui::TableSetColumnIndex(1);
-                ImGui::TextColored(bottleneck_ ? Color_Orange : Color_Green, "%s", bottleneck_ ? (bottleneck_flags_ == BottleneckSource_Flags_Wireless ? "Wireless" : bottleneck_flags_ == BottleneckSource_Flags_CPU ? "CPU" : "GPU") : "None");
+
+                if (bottleneck_flags_ & BottleneckSource_Flags_Wireless)
+                    ImGui::TextColored(Color_Orange, "%s", "Wireless");
+                else if (bottleneck_flags_ & BottleneckSource_Flags_CPU)
+                    ImGui::TextColored(Color_Orange, "%s", "CPU");
+                else if (bottleneck_flags_ & BottleneckSource_Flags_GPU)
+                    ImGui::TextColored(Color_Orange, "%s", "GPU");
+                else if (bottleneck_flags_ & BottleneckSource_Flags_VRAM)
+                    ImGui::TextColored(Color_Orange, "%s", "VRAM");
+                else
+                    ImGui::TextColored(Color_Green, "%s", "None");
+
 
                 ImGui::Unindent(10.0f);
 
@@ -498,6 +512,108 @@ auto ControllerOverlay::Render() -> bool
                     }
 
                     ImGui::EndTable();
+                }
+
+                ImGui::EndTabItem();
+            }
+
+            if (ImGui::BeginTabItem("Alerts"))
+            {
+                static int active_expanded_section = -1;
+
+                auto GetAlertHeaderColor = [](uint32_t flag_mask) -> ImVec4 {
+                    if (flag_mask & FrameTimeInfo_Flags_Frame_Dropped)         
+                        return Color_Magenta;
+                    if (flag_mask & FrameTimeInfo_Flags_OneThirdFramePresented) 
+                        return Color_Red;
+                    if (flag_mask & FrameTimeInfo_Flags_Frame_LateStart)
+                        return Color_Red;
+                    if (flag_mask & FrameTimeInfo_Flags_Reprojecting)           
+                        return Color_Orange;
+                    if (flag_mask & FrameTimeInfo_Flags_MotionSmoothingEnabled) 
+                        return Color_Yellow;
+                    if (flag_mask & FrameTimeInfo_Flags_Frame_Cpu_Stalled)      
+                        return Color_LightBlue;
+                    if (flag_mask & FrameTimeInfo_Flags_Frame_Throttled)        
+                        return Color_PinkishRed;
+                    if (flag_mask & FrameTimeInfo_Flags_PredictedAhead)
+                        return Color_LightBlue;
+                    return Color_Green;
+                };
+
+                {
+                    struct AlertCategory {
+                        const char* name;
+                        uint32_t    flag;
+                    };
+
+                    static const AlertCategory categories[] = {
+                        { "Dropped Frames",     FrameTimeInfo_Flags_Frame_Dropped },
+                        { "Reprojecting",       FrameTimeInfo_Flags_Reprojecting },
+                        { "Motion Smoothing",   FrameTimeInfo_Flags_MotionSmoothingEnabled },
+                        { "One Third Frame",    FrameTimeInfo_Flags_OneThirdFramePresented },
+                        { "CPU Stalled",        FrameTimeInfo_Flags_Frame_Cpu_Stalled },
+                        { "Frame Throttled",    FrameTimeInfo_Flags_Frame_Throttled },
+                        { "Predicted Ahead",    FrameTimeInfo_Flags_PredictedAhead },
+                        { "Late Start",         FrameTimeInfo_Flags_Frame_LateStart },
+                    };
+
+                    constexpr int num_categories = IM_ARRAYSIZE(categories);
+
+                    if (active_expanded_section == -1)
+                    {
+                        for (int i = 0; i < num_categories; ++i)
+                        {
+                            const auto& cat = categories[i];
+
+                            auto has_alerts = performance_alerts_ | std::views::filter([f = cat.flag](const PerformanceAlert& a) {
+                                return (a.flags & f) != 0;
+                            });
+
+                            if (std::ranges::empty(has_alerts)) 
+                                continue;
+
+                            ImVec4 col = GetAlertHeaderColor(cat.flag);
+                            ImGui::PushStyleColor(ImGuiCol_Text, col);
+
+                            if (ImGui::Selectable(cat.name))
+                                active_expanded_section = i;
+
+                            ImGui::PopStyleColor();
+                        }
+                    }
+                    else
+                    {
+                        const auto& cat = categories[active_expanded_section];
+
+                        if (ImGui::Button("Back"))
+                            active_expanded_section = -1;
+
+                        ImGui::SameLine();
+                        ImGui::TextUnformatted(cat.name);
+
+                        ImGui::Separator();
+
+                        if (ImGui::BeginChild("##FullSizeAlertContent", ImVec2(0, 0), true, ImGuiWindowFlags_AlwaysVerticalScrollbar))
+                        {
+                            auto filtered = performance_alerts_ | std::views::filter([f = cat.flag](const PerformanceAlert& a) {
+                                return (a.flags & f) != 0;
+                            });
+
+                            int shown = 0;
+                            for (const auto& alert : filtered)
+                            {
+                                shown++;
+
+                                std::string count_str = (alert.count > 1) ? " (x" + std::to_string(alert.count) + ")" : "";
+                                ImGui::TextWrapped("%s%s", alert.message.c_str(), count_str.c_str());
+
+                                ImGui::Dummy(ImVec2(0, 10));
+                                ImGui::Separator();
+                            }
+                        }
+                        ImGui::EndChild();
+                    }
                 }
 
                 ImGui::EndTabItem();
@@ -751,6 +867,16 @@ auto ControllerOverlay::Update() -> void
         gpu_frame_time_ms_ =
             timings.m_flTotalRenderGpuMs;
 
+        if (timings.m_flTransferLatencyMs > 0.0f) {
+            wireless_latency_ = timings.m_flTransferLatencyMs;
+        }
+        else if (timings.m_flCompositorIdleCpuMs >= 1.0f) {
+            wireless_latency_ = timings.m_flCompositorIdleCpuMs;
+        }
+        else {
+            wireless_latency_ = 0.0f;
+        }
+
         uint32_t predicted_frames = VR_COMPOSITOR_ADDITIONAL_PREDICTED_FRAMES(timings);
         uint32_t throttled_frames = VR_COMPOSITOR_NUMBER_OF_THROTTLED_FRAMES(timings);
 
@@ -758,9 +884,14 @@ auto ControllerOverlay::Update() -> void
         FrameTimeInfo info_gpu = {};
 
         if (timings.m_nNumDroppedFrames >= 1) {
-            // The frame was dropped because of wireless latency.
-            if (timings.m_flCompositorIdleCpuMs >= frame_time_) {
+            if (wireless_latency_ >= 15.0f) {
                 cpu_frame_time_ms_ += timings.m_flCompositorIdleCpuMs;
+                info_cpu.flags |= FrameTimeInfo_Flags_Frame_CompositorIdle;
+            }
+            else {
+                if (cpu_frame_time_ms_ >= frame_time_) {
+                    cpu_frame_time_ms_ = frame_time_ * 2;
+                }
             }
             if (gpu_frame_time_ms_ >= frame_time_) {
                 gpu_frame_time_ms_ = frame_time_ * 2;
@@ -770,11 +901,27 @@ auto ControllerOverlay::Update() -> void
 
         }
         else {
+            if (cpu_frame_time_ms_ > frame_time_) {
+                if (timings.m_flClientFrameIntervalMs > frame_time_)
+                    info_cpu.flags |= FrameTimeInfo_Flags_Frame_LateStart;
+                else {
+                    if (throttled_frames >= 2)
+                        info_cpu.flags |= FrameTimeInfo_Flags_Frame_Throttled;
+                    else if (predicted_frames >= 1) {
+                        if (predicted_frames >= 2)
+                            info_cpu.flags |= FrameTimeInfo_Flags_Frame_Cpu_Stalled;
+                        else
+                            info_cpu.flags |= FrameTimeInfo_Flags_PredictedAhead;
+                    }
+                }
+            }
+            else {
+                if (throttled_frames >= 2 && predicted_frames >= 2)
+                    info_cpu.flags |= FrameTimeInfo_Flags_OneThirdFramePresented;
+            }
             if (timings.m_nNumFramePresents > 1) {
                 if (timings.m_nNumMisPresented >= 2) {
                     info_gpu.flags |= FrameTimeInfo_Flags_OneThirdFramePresented;
-                    if (throttled_frames >= 2)
-                        info_cpu.flags |= FrameTimeInfo_Flags_Frame_Throttled;
                 }
                 else {
                     if (timings.m_nReprojectionFlags & vr::VRCompositor_ReprojectionAsync) {
@@ -788,20 +935,11 @@ auto ControllerOverlay::Update() -> void
                     }
                 }
             }
-            else {
-                if (predicted_frames >= 1) {
-                    if (cpu_frame_time_ms_ > frame_time_) {
-                        if (predicted_frames >= 2)
-                            info_cpu.flags |= FrameTimeInfo_Flags_Frame_Cpu_Stalled;
-                        else
-                            info_cpu.flags |= FrameTimeInfo_Flags_PredictedAhead;
-                    }
-                    else {
-                        info_cpu.flags |= FrameTimeInfo_Flags_PredictedAhead;
-                    }
-                }
-            }
         }
+
+        effective_cpu_frame_time_ms_ = std::max(frame_time_, cpu_frame_time_ms_);
+        if (!(info_cpu.flags & FrameTimeInfo_Flags_Frame_LateStart))
+            effective_cpu_frame_time_ms_ *= throttled_frames > 0 ? (throttled_frames + 1) : 1;
 
         info_cpu.frametime = cpu_frame_time_ms_;
         cpu_frame_times_.data()[frame_index_] = info_cpu;
@@ -811,18 +949,6 @@ auto ControllerOverlay::Update() -> void
         total_predicted_frames_ += predicted_frames;
         total_dropped_frames_ += timings.m_nNumDroppedFrames;
         total_throttled_frames_ += throttled_frames;
-
-        if (timings.m_flTransferLatencyMs > 0.0f) {
-            wireless_latency_ = timings.m_flTransferLatencyMs;
-        }
-        else if (timings.m_flCompositorIdleCpuMs >= 1.0f) {
-            wireless_latency_ = timings.m_flCompositorIdleCpuMs;
-        }
-        else {
-            wireless_latency_ = 0.0f;
-        }
-
-        frame_index_ = (frame_index_ + 1) % static_cast<int>(refresh_rate_);
 
         static BottleneckSource_Flags stable_bottleneck_flags = BottleneckSource_Flags_None;
         static BottleneckSource_Flags last_detected_flags = BottleneckSource_Flags_None;
@@ -838,8 +964,7 @@ auto ControllerOverlay::Update() -> void
         else if ((gpu_frame_times_[frame_index_].flags & FrameTimeInfo_Flags_Reprojecting || gpu_frame_times_[frame_index_].flags & FrameTimeInfo_Flags_OneThirdFramePresented) &&
             static_cast<int>(current_fps_) != static_cast<int>(refresh_rate_))
             detected_flags = BottleneckSource_Flags_GPU;
-        else if ((cpu_frame_times_[frame_index_].flags & FrameTimeInfo_Flags_Frame_Cpu_Stalled) &&
-            static_cast<int>(current_fps_) != static_cast<int>(refresh_rate_))
+        else if ((cpu_frame_times_[frame_index_].flags & FrameTimeInfo_Flags_Frame_Cpu_Stalled) && static_cast<int>(current_fps_) != static_cast<int>(refresh_rate_))
             detected_flags = BottleneckSource_Flags_CPU;
 
         if (detected_flags == stable_bottleneck_flags) {
@@ -872,21 +997,94 @@ auto ControllerOverlay::Update() -> void
 
         bottleneck_flags_ = stable_bottleneck_flags;
         bottleneck_ = (bottleneck_flags_ != BottleneckSource_Flags_None);
+
+        frame_index_ = (frame_index_ + 1) % static_cast<int>(refresh_rate_);
+
+        uint64_t now_ms = SDL_GetTicks();
+        if (!performance_alerts_.empty() && (now_ms - performance_alerts_.back().timestamp > (3600ULL * 1000ULL))) 
+        {
+            performance_alerts_.clear();
+        }
+
+        uint32_t alert_flags = {};
+        std::string message = {};
+
+        if (((cpu_frame_times_[frame_index_].flags & FrameTimeInfo_Flags_Frame_CompositorIdle) && (cpu_frame_times_[frame_index_].flags & FrameTimeInfo_Flags_Frame_Dropped))) {
+            message = "The frame was discarded because the compositor's idle threshold exceeded the overall frame time budget due to excessive network latency. This commonly occurs in wireless streaming setups that do not enforce server-side pacing.";
+            alert_flags |= FrameTimeInfo_Flags_Frame_Dropped | FrameTimeInfo_Flags_Frame_CompositorIdle;
+        }
+        else if (cpu_frame_times_[frame_index_].flags & FrameTimeInfo_Flags_Frame_Dropped) {
+            message = "The frame was dropped by the compositor for an unknown cause; this normally signals transitory lag spikes when the game switches context, such as loading screens; if the problem persists, it could be a GPU vendor driver issue.";
+            alert_flags |= FrameTimeInfo_Flags_Frame_Dropped;
+        }
+        else if ((gpu_frame_times_[frame_index_].flags & FrameTimeInfo_Flags_Reprojecting)) {
+            message = "The compositor reprojected the frame since your machine was unable to meet the frame time target; please adjust your rendering resolution or try changing in-game settings to decrease fidelity to ensure consistent frame time.";
+            alert_flags |= FrameTimeInfo_Flags_Reprojecting;
+        }
+        else if ((gpu_frame_times_[frame_index_].flags & FrameTimeInfo_Flags_MotionSmoothingEnabled)) {
+            message = "You have enabled Motion Smoothing, which interpolates between previous and upcoming frames when your system is unable to satisfy the frame time budget; if you dislike the ripple effect, you can disable Motion Smoothing in the SteamVR settings.";
+            alert_flags |= FrameTimeInfo_Flags_MotionSmoothingEnabled;
+        }
+        else if (gpu_frame_times_[frame_index_].flags & FrameTimeInfo_Flags_OneThirdFramePresented) {
+            message = "The compositor presented the same frame across three different vsync intervals, indicating severe frame pacing issues. This usually occurs when the GPU is unable to sustain the required frame rate for your headset's refresh rate.";
+            alert_flags |= FrameTimeInfo_Flags_OneThirdFramePresented;
+        }
+        else if (cpu_frame_times_[frame_index_].flags & FrameTimeInfo_Flags_Frame_Throttled) {
+            message = "The compositor throttled frame submission due to repeated missed frame deadlines. This can occur when the application consistently exceeds the available frame time budget.";
+            alert_flags |= FrameTimeInfo_Flags_Frame_Throttled;
+        }
+        else if (cpu_frame_times_[frame_index_].flags & FrameTimeInfo_Flags_Frame_Cpu_Stalled) {
+            message = "The CPU was unable to submit frames in time, causing a stall in the rendering pipeline. This typically indicates a CPU bottleneck or heavy simulation workload.";
+            alert_flags |= FrameTimeInfo_Flags_Frame_Cpu_Stalled;
+        }
+        else if (cpu_frame_times_[frame_index_].flags & FrameTimeInfo_Flags_PredictedAhead) {
+            message = "The compositor predicted ahead due to minor frame timing instability. While not necessarily visible, this may indicate early signs of performance pressure.";
+            alert_flags |= FrameTimeInfo_Flags_PredictedAhead;
+        }
+        else if (cpu_frame_times_[frame_index_].flags & FrameTimeInfo_Flags_Frame_LateStart) {
+            message = "The frame began rendering after its targeted CPU budget, but not late enough to result in a dropped frame. This occurs when the application exceeds its CPU frame budget but still fits within the ~3ms running-start buffer before vsync. It may also signal server-side frame pacing enforcement on certain streams (e.g. ALVR, PICO Connect).";
+            alert_flags |= FrameTimeInfo_Flags_Frame_LateStart;
+        }
+
+        if (!message.empty())
+        {
+            bool merged = false;
+
+            for (auto it = performance_alerts_.rbegin(); it != performance_alerts_.rend(); ++it) 
+            {
+                if ((it->flags == alert_flags) && (now_ms - it->timestamp) < (3 * (60 * 1000)))
+                {
+                    it->count++;
+                    it->timestamp = now_ms;
+                    it->flags = alert_flags;
+                    merged = true;
+                    break;
+                }
+            }
+
+            if (!merged) {
+                performance_alerts_.push_back(PerformanceAlert{
+                    .timestamp = now_ms,
+                    .flags = alert_flags,
+                    .message = std::move(message),
+                    .count = 1
+                });
+            }
+        }
     }
 
+    static double fps_counter = 0.0;
+    if (ImGui::GetTime() - fps_counter >= 0.2f) {
+        cpu_frame_time_sample_ = cpu_frame_time_ms_;
+        gpu_frame_time_avg_ = gpu_frame_time_ms_;
+        current_fps_ = (effective_cpu_frame_time_ms_ > 0.0f) ? 1000.0f / effective_cpu_frame_time_ms_ : 0.0f;
+        fps_counter = ImGui::GetTime();
+    }
+
+
     static double last_time = 0.0;
-    if (ImGui::GetTime() - last_time >= 0.5f) {
-		cpu_frame_time_sample_ = cpu_frame_time_ms_;
-		gpu_frame_time_avg_ = gpu_frame_time_ms_;
+    if (ImGui::GetTime() - last_time >= 1.0f) {
         task_monitor_.Update();
-        float effective_frametime_ms = std::max(
-            frame_time_,
-            timings.m_flCompositorRenderCpuMs +
-            timings.m_flWaitForPresentCpuMs +
-            timings.m_flClientFrameIntervalMs +
-            timings.m_flSubmitFrameMs
-        );
-        current_fps_ = (effective_frametime_ms > 0.0f) ? 1000.0f / effective_frametime_ms : 0.0f;
         last_time = ImGui::GetTime();
     }
 
@@ -949,6 +1147,8 @@ auto ControllerOverlay::Reset() -> void
 
     memset(cpu_frame_times_.data(), 0x0, cpu_frame_times_.size() * sizeof(FrameTimeInfo));
     memset(gpu_frame_times_.data(), 0x0, cpu_frame_times_.size() * sizeof(FrameTimeInfo));
+
+    performance_alerts_.clear();
 
     frame_index_ = 0;
 

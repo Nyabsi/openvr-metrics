@@ -7,6 +7,7 @@
 #include <core/TaskMonitor.hpp>
 #include <core/Settings.hpp>
 #include <overlay/Overlay.hpp>
+#include <deque>
 
 enum FrameTimeInfo_Flags : uint32_t {
     FrameTimeInfo_Flags_None = 0,
@@ -16,7 +17,9 @@ enum FrameTimeInfo_Flags : uint32_t {
     FrameTimeInfo_Flags_OneThirdFramePresented = 1 << 3,
     FrameTimeInfo_Flags_Frame_Dropped = 1 << 4,
     FrameTimeInfo_Flags_Frame_Cpu_Stalled = 1 << 5,
-    FrameTimeInfo_Flags_Frame_Throttled = 1 << 6
+    FrameTimeInfo_Flags_Frame_Throttled = 1 << 6,
+    FrameTimeInfo_Flags_Frame_CompositorIdle = 1 << 7,
+    FrameTimeInfo_Flags_Frame_LateStart = 1 << 8
 };
 
 enum BottleneckSource_Flags : uint32_t {
@@ -30,6 +33,13 @@ struct alignas(8) FrameTimeInfo
 {
     float frametime = { 0.0f };
     uint32_t flags = { FrameTimeInfo_Flags_None };
+};
+
+struct PerformanceAlert {
+    uint64_t timestamp = {};
+    uint32_t flags = {};
+    std::string message = {};
+    uint32_t count = {};
 };
 
 struct TrackedDevice {
@@ -95,6 +105,7 @@ private:
     uint32_t total_predicted_frames_;
     uint32_t total_throttled_frames_;
     float cpu_frame_time_ms_;
+    float effective_cpu_frame_time_ms_;
     float gpu_frame_time_ms_;
 	float cpu_frame_time_sample_;
 	float gpu_frame_time_avg_;
@@ -106,6 +117,9 @@ private:
     std::vector<FrameTimeInfo> cpu_frame_times_;
     std::vector<FrameTimeInfo> gpu_frame_times_;
     std::vector<TrackedDevice> tracked_devices_;
+    std::deque<PerformanceAlert> performance_alerts_;
+    GpuInfo gpu_info_;
+    ProcessInfo process_info_;
 
     bool color_temperature_;
     float color_channel_red_;
