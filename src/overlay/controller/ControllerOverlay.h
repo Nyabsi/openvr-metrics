@@ -4,7 +4,10 @@
 
 #include <imgui.h>
 
+#ifndef __linux
 #include <core/TaskMonitor.hpp>
+#endif
+
 #include <core/Settings.hpp>
 #include <overlay/Overlay.hpp>
 #include <deque>
@@ -80,8 +83,9 @@ public:
     auto RemoveMonitoredDeviceById(uint32_t device_id) -> void;
 private:
     auto UpdateDeviceTransform() -> void;
-
+#ifndef __linux
     TaskMonitor task_monitor_;
+#endif
     Settings settings_;
 
     float frame_time_;
@@ -118,9 +122,10 @@ private:
     std::vector<FrameTimeInfo> gpu_frame_times_;
     std::vector<TrackedDevice> tracked_devices_;
     std::deque<PerformanceAlert> performance_alerts_;
+#ifndef __linux
     GpuInfo gpu_info_;
     ProcessInfo process_info_;
-
+#endif
     bool color_temperature_;
     float color_channel_red_;
     float color_channel_green_;

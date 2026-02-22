@@ -25,6 +25,7 @@
 #include <windows.h>
 #else
 #include <time.h>
+#include <math.h>
 #endif
 
 struct ImGui_ImplOpenVR_Data {
@@ -247,7 +248,7 @@ bool ImGui_ImplOpenVR_ProcessOverlayEvent(const vr::VREvent_t& event)
     return true;
 }
 
-bool ImGui_ImplOpenVR_ProcessLaserInput(vr::ETrackedControllerRole role)
+bool ImGui_ImplOpenVR_ProcessLaserInput(int role)
 {
     ImGui_ImplOpenVR_Data* bd = ImGui_ImplOpenVR_GetBackendData();
     IM_ASSERT(bd != nullptr && "Context or backend not initialized!");
@@ -257,7 +258,7 @@ bool ImGui_ImplOpenVR_ProcessLaserInput(vr::ETrackedControllerRole role)
 
     ImGuiIO& io = ImGui::GetIO();
 
-    vr::TrackedDeviceIndex_t controller = vr::VRSystem()->GetTrackedDeviceIndexForControllerRole(role);
+    vr::TrackedDeviceIndex_t controller = vr::VRSystem()->GetTrackedDeviceIndexForControllerRole(static_cast<vr::ETrackedControllerRole>(role));
     if (controller == vr::k_unTrackedDeviceIndexInvalid)
         return false;
 
@@ -404,7 +405,7 @@ void ImGui_ImplOpenVR_NewFrame()
     }
 
     if (vr::VROverlay()->IsOverlayVisible(bd->handle) && !bd->keyboard_active && io.WantTextInput) {
-        vr::VROverlay()->ShowKeyboardForOverlay(bd->handle, vr::k_EGamepadTextInputModeNormal, vr::k_EGamepadTextInputLineModeSingleLine, vr::KeyboardFlag_Minimal | vr::KeyboardFlag_HideDoneKey | vr::KeyboardFlag_ShowArrowKeys, "ImGui OpenVR Virtual Keyboard", 1, "", NULL);
+        vr::VROverlay()->ShowKeyboardForOverlay(bd->handle, vr::k_EGamepadTextInputModeNormal, vr::k_EGamepadTextInputLineModeSingleLine, vr::KeyboardFlag_Minimal | vr::KeyboardFlag_HideDoneKey | vr::KeyboardFlag_ShowArrowKeys, "ImGui OpenVR Virtual Keyboard", 1, "", 0);
         bd->keyboard_active = true;
     }
 

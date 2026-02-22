@@ -60,9 +60,10 @@ ControllerOverlay::ControllerOverlay() : Overlay(OVERLAY_KEY, OVERLAY_NAME, vr::
     color_temp_ = {};
     color_brightness_ = {};
     colour_mask_ = {};
+#ifndef __linux
     gpu_info_ = {};
     process_info_ = {};
-
+#endif
     try {
         this->SetInputMethod(vr::VROverlayInputMethod_Mouse);
         this->EnableFlag(vr::VROverlayFlags_SendVRDiscreteScrollEvents);
@@ -79,9 +80,9 @@ ControllerOverlay::ControllerOverlay() : Overlay(OVERLAY_KEY, OVERLAY_NAME, vr::
     }
 
     ImPlot::CreateContext();
-
+#ifndef __linux
     task_monitor_.Initialize();
-
+#endif
     settings_.Load();
 
     display_mode_ = static_cast<Overlay_DisplayMode>(settings_.DisplayMode());
@@ -142,9 +143,13 @@ auto ControllerOverlay::Render() -> bool
                 this->Reset();
                 last_pid = pid;
             }
+#ifndef __linux
 			process_info_ = task_monitor_.GetProcessInfoByPid(pid);
             gpu_info_ = getCurrentlyUsedGpu(process_info_);
             ImGui::Text("Current Application: %s (%d)", process_info_.process_name.c_str(), pid);
+#else
+            ImGui::Text("Current Application: (%d)", pid);
+#endif
         }
         else {
 			ImGui::Text("Current Application: SteamVR Void");
@@ -308,13 +313,13 @@ auto ControllerOverlay::Render() -> bool
 
             if (ImGui::BeginTable("##metrics_extra", 2, ImGuiTableFlags_SizingStretchProp)) {
                 ImGui::Indent(10.0f);
-
+#ifndef __linux
                 ImGui::TableNextRow();
                 ImGui::TableSetColumnIndex(0);
                 ImGui::Text("CPU");
                 ImGui::TableSetColumnIndex(1);
                 ImGui::Text("%.1f %%", process_info_.cpu.total_cpu_usage);
-
+#endif
                 ImGui::TableNextRow();
                 ImGui::TableSetColumnIndex(0);
                 ImGui::Text("FPS");
@@ -360,7 +365,7 @@ auto ControllerOverlay::Render() -> bool
 
             if (ImGui::BeginTable("##metrics_extra3", 2, ImGuiTableFlags_SizingStretchProp)) {
                 ImGui::Indent(10.0f);
-
+#ifndef __linux
                 ImGui::TableNextRow();
                 ImGui::TableSetColumnIndex(0);
                 ImGui::Text("GPU");
@@ -402,7 +407,7 @@ auto ControllerOverlay::Render() -> bool
                     ? (process_info_.memory_usage * 100.0f) / process_info_.memory_available
                     : 0.0f
                 );
-
+#endif
                 ImGui::TableNextRow();
                 ImGui::TableSetColumnIndex(0);
                 ImGui::Text("Bottleneck");
@@ -639,7 +644,7 @@ auto ControllerOverlay::Render() -> bool
                         ImGui::TableNextRow();
 
                         ImGui::TableSetColumnIndex(0);
-                        ImGui::Text("%llu", device.device_id);
+                        ImGui::Text("%lu", device.device_id);
 
                         ImGui::TableSetColumnIndex(1);
                         ImGui::Text("%s", device.device_label.c_str());
@@ -751,7 +756,7 @@ auto ControllerOverlay::Render() -> bool
                         }
 
                         if (temperature <= 66.0f) {
-                            color_channel_green_ = (std::clamp<float>(99.4708025861f * std::logf(temperature) - 161.1195681661f, 0, 255) / 255.0f);
+                            color_channel_green_ = (std::clamp<float>(99.4708025861f * ::logf(temperature) - 161.1195681661f, 0, 255) / 255.0f);
                         }
                         else {
                             color_channel_green_ = (std::clamp<float>(288.1221695283f * static_cast<float>(std::pow((temperature - 60.0f), -0.0755148492f)), 0, 255) / 255.0f);
@@ -765,7 +770,7 @@ auto ControllerOverlay::Render() -> bool
                                 color_channel_blue_ = 0.01f;
                             }
                             else {
-                                color_channel_blue_ = (std::clamp<float>(138.5177312231f * std::logf(temperature - 10.0f) - 305.0447927307f, 0, 255) / 255.0f);
+                                color_channel_blue_ = (std::clamp<float>(138.5177312231f * ::logf(temperature - 10.0f) - 305.0447927307f, 0, 255) / 255.0f);
                             }
                         }
 
@@ -848,10 +853,8 @@ auto ControllerOverlay::Update() -> void
 {
     Overlay::Update();
 
-    vr::Compositor_FrameTiming timings =
-    {
-        .m_nSize = sizeof(vr::Compositor_FrameTiming)
-    };
+    vr::Compositor_FrameTiming timings = {};
+    timings.m_nSize = sizeof(vr::Compositor_FrameTiming);
 
     bool newData = vr::VRCompositor()->GetFrameTiming(&timings, 0);
 
@@ -1081,13 +1084,13 @@ auto ControllerOverlay::Update() -> void
         fps_counter = ImGui::GetTime();
     }
 
-
+#ifndef __linux
     static double last_time = 0.0;
     if (ImGui::GetTime() - last_time >= 1.0f) {
         task_monitor_.Update();
         last_time = ImGui::GetTime();
     }
-
+#endif
     switch (this->DisplayMode()) {
         case Overlay_DisplayMode_Always:
         {
@@ -1104,6 +1107,8 @@ auto ControllerOverlay::Update() -> void
                 this->Show();
             break;
         }
+        default:
+            break;
     }
 
     const auto scale = this->OverlayScale();
@@ -1119,7 +1124,11 @@ auto ControllerOverlay::Update() -> void
 
     const glm::vec3 position = transform.position;
     const glm::quat rotation = transform.rotation;
-    if (g_overlay_handedness != handedness || (g_position != position && g_rotation != rotation) || g_last_index == vr::k_unTrackedDeviceIndexInvalid && hand_index != vr::k_unTrackedDeviceIndexInvalid) {
+    if (
+        g_overlay_handedness != handedness ||
+        (g_position != position && g_rotation != rotation) ||
+        (g_last_index == vr::k_unTrackedDeviceIndexInvalid && hand_index != vr::k_unTrackedDeviceIndexInvalid)
+    ) {
         this->SetTransformDeviceRelative(handedness, position, rotation);
         g_overlay_handedness = handedness;
         g_position = position;
@@ -1134,9 +1143,9 @@ auto ControllerOverlay::Destroy() -> void
 {
     delete[] colour_mask_;
     colour_mask_ = nullptr;
-
+#ifndef __linux
     task_monitor_.Destroy();
-
+#endif
     ImPlot::DestroyContext();
 }
 
@@ -1145,9 +1154,8 @@ auto ControllerOverlay::Reset() -> void
     cpu_frame_times_.resize(static_cast<int>(refresh_rate_));
     gpu_frame_times_.resize(static_cast<int>(refresh_rate_));
 
-    memset(cpu_frame_times_.data(), 0x0, cpu_frame_times_.size() * sizeof(FrameTimeInfo));
-    memset(gpu_frame_times_.data(), 0x0, cpu_frame_times_.size() * sizeof(FrameTimeInfo));
-
+    cpu_frame_times_.clear();
+    gpu_frame_times_.clear();
     performance_alerts_.clear();
 
     frame_index_ = 0;

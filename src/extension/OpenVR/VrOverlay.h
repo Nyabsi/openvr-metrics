@@ -116,7 +116,7 @@ public:
     }
 
     [[maybe_unused]] auto ShowKeyboard(vr::EGamepadTextInputMode mode, bool multi_line = false) -> void {
-        vr::EVROverlayError result = vr::VROverlay()->ShowKeyboardForOverlay(handle, mode, multi_line ? vr::k_EGamepadTextInputLineModeMultipleLines : vr::k_EGamepadTextInputLineModeSingleLine, vr::KeyboardFlag_Minimal | vr::KeyboardFlag_HideDoneKey, "OpenVR Overlay Provided Virtual Keyboard", 1, "", NULL);
+        vr::EVROverlayError result = vr::VROverlay()->ShowKeyboardForOverlay(handle, mode, multi_line ? vr::k_EGamepadTextInputLineModeMultipleLines : vr::k_EGamepadTextInputLineModeSingleLine, vr::KeyboardFlag_Minimal | vr::KeyboardFlag_HideDoneKey, "OpenVR Overlay Provided Virtual Keyboard", 1, "", 0);
         if (result > vr::VROverlayError_None)
             throw std::runtime_error(std::format("Failed to show keyboard {}", static_cast<int>(result)));
     }

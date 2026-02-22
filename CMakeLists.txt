@@ -39,15 +39,22 @@ add_subdirectory(${Json_ROOT} EXCLUDE_FROM_ALL)
 
 message(STATUS "ENABLE_VULKAN_VALIDATION = ${ENABLE_VULKAN_VALIDATION}")
 
-add_executable(metrics_overlay
+set(SOURCES
     "src/Main.cpp"
     "src/core/Settings.cpp"
-    "src/core/TaskMonitor.cpp"
     "src/overlay/Overlay.cpp"
     "src/overlay/controller/ControllerOverlay.cpp"
-    "src/overlay/dashboard/DashboardOverlay.cpp"
     "src/renderer/VulkanRenderer.cpp"
 )
+
+if (NOT UNIX OR APPLE)
+    list(APPEND SOURCES
+        "src/core/TaskMonitor.cpp"
+        "src/overlay/dashboard/DashboardOverlay.cpp"
+    )
+endif()
+
+add_executable(metrics_overlay ${SOURCES})
 
 target_include_directories(metrics_overlay PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
 

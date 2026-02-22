@@ -50,12 +50,10 @@ auto VulkanRenderer::Initialize()  -> void
     instance_extensions.push_back("VK_EXT_debug_report");
 #endif
 
-    VkInstanceCreateInfo instance_create_info =
-    {
-        .sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
-        .enabledExtensionCount = (uint32_t)instance_extensions.size(),
-        .ppEnabledExtensionNames = instance_extensions.data(),
-    };
+    VkInstanceCreateInfo instance_create_info = {};
+    instance_create_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
+    instance_create_info.enabledExtensionCount = (uint32_t)instance_extensions.size();
+    instance_create_info.ppEnabledExtensionNames = instance_extensions.data();
 
 #ifdef ENABLE_VULKAN_VALIDATION
     const char* enabled_layers[] = 
@@ -100,7 +98,8 @@ auto VulkanRenderer::Initialize()  -> void
     vk_result = vkEnumeratePhysicalDevices(vulkan_instance_, &device_count, nullptr);
     VK_VALIDATE_RESULT(vk_result);
 
-    if (device_count < 0)
+    // TODO: describe this error better to the user.
+    if (device_count == 0)
         std::exit(EXIT_FAILURE);
 
     device_list_.resize(device_count);
@@ -190,36 +189,29 @@ auto VulkanRenderer::Initialize()  -> void
     auto device_extensions = get_device_extensions(vulkan_device_extensions_);
 
     constexpr float queue_priority = 1.0f;
-    VkDeviceQueueCreateInfo device_queue_info =
-    {
-        .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
-        .queueFamilyIndex = vulkan_queue_family_,
-        .queueCount = 1,
-        .pQueuePriorities = &queue_priority
-    };
+    
+    VkDeviceQueueCreateInfo device_queue_info = {};
+    device_queue_info.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+    device_queue_info.queueFamilyIndex = vulkan_queue_family_;
+    device_queue_info.queueCount = 1;
+    device_queue_info.pQueuePriorities = &queue_priority;
 
-    VkPhysicalDeviceTimelineSemaphoreFeatures timeline_semaphore_features =
-    {
-        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_TIMELINE_SEMAPHORE_FEATURES,
-        .timelineSemaphore = VK_TRUE,
-    };
+    VkPhysicalDeviceTimelineSemaphoreFeatures timeline_semaphore_features = {};
+    timeline_semaphore_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_TIMELINE_SEMAPHORE_FEATURES;
+    timeline_semaphore_features.timelineSemaphore = VK_TRUE;
 
-    VkPhysicalDeviceDynamicRenderingFeaturesKHR dynamic_rendering_features =
-    {
-        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES_KHR,
-        .pNext = &timeline_semaphore_features,
-        .dynamicRendering = VK_TRUE,
-    };
+    VkPhysicalDeviceDynamicRenderingFeaturesKHR dynamic_rendering_features = {};
+    dynamic_rendering_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES_KHR;
+    dynamic_rendering_features.pNext = &timeline_semaphore_features;
+    dynamic_rendering_features.dynamicRendering = VK_TRUE;
 
-    VkDeviceCreateInfo device_create_info = 
-    {
-        .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
-        .pNext = &dynamic_rendering_features,
-        .queueCreateInfoCount = 1,
-        .pQueueCreateInfos = &device_queue_info,
-        .enabledExtensionCount = (uint32_t)device_extensions.size(),
-        .ppEnabledExtensionNames = device_extensions.data(),
-    };
+    VkDeviceCreateInfo device_create_info =  {};
+    device_create_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+    device_create_info.pNext = &dynamic_rendering_features;
+    device_create_info.queueCreateInfoCount = 1;
+    device_create_info.pQueueCreateInfos = &device_queue_info;
+    device_create_info.enabledExtensionCount = (uint32_t)device_extensions.size();
+    device_create_info.ppEnabledExtensionNames = device_extensions.data();
 
     vk_result = vkCreateDevice(vulkan_physical_device_, &device_create_info, vulkan_allocator_, &vulkan_device_);
     VK_VALIDATE_RESULT(vk_result);
@@ -236,14 +228,13 @@ auto VulkanRenderer::Initialize()  -> void
         { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,         256 },
         { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,         256 },
     };
-    \
-    VkDescriptorPoolCreateInfo pool_info = {
-        .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
-        .flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT,
-        .maxSets = 2048,
-        .poolSizeCount = std::size(pool_sizes),
-        .pPoolSizes = pool_sizes,
-    };
+    
+    VkDescriptorPoolCreateInfo pool_info = {};
+    pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+    pool_info.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
+    pool_info.maxSets = 2048;
+    pool_info.poolSizeCount = std::size(pool_sizes);
+    pool_info.pPoolSizes = pool_sizes;
 
     for (VkDescriptorPoolSize& pool_size : pool_sizes)
         pool_info.maxSets += pool_size.descriptorCount;
@@ -272,55 +263,45 @@ auto VulkanRenderer::SetupSurface(Overlay* overlay, uint32_t width, uint32_t hei
 
     for (uint32_t i = 0; i < Vulkan_Surface::ImageCount; ++i) 
     {
-        VkCommandPoolCreateInfo command_pool_create_info =
-        {
-            .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
-            .flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
-            .queueFamilyIndex = vulkan_queue_family_,
-        };
+        VkCommandPoolCreateInfo command_pool_create_info = {};
+        command_pool_create_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+        command_pool_create_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+        command_pool_create_info.queueFamilyIndex = vulkan_queue_family_;
 
         vk_result = vkCreateCommandPool(vulkan_device_, &command_pool_create_info, vulkan_allocator_, &overlay->Surface()->command_pools[i]);
         VK_VALIDATE_RESULT(vk_result);
 
-        VkCommandBufferAllocateInfo command_buffer_allocate_info = {
-            .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
-            .commandPool = overlay->Surface()->command_pools[i],
-            .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-            .commandBufferCount = 1,
-        };
+        VkCommandBufferAllocateInfo command_buffer_allocate_info = {};
+        command_buffer_allocate_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+        command_buffer_allocate_info.commandPool = overlay->Surface()->command_pools[i];
+        command_buffer_allocate_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+        command_buffer_allocate_info.commandBufferCount = 1;
 
         vk_result = vkAllocateCommandBuffers(vulkan_device_, &command_buffer_allocate_info, &overlay->Surface()->command_buffers[i]);
         VK_VALIDATE_RESULT(vk_result);
 
         vkGetDeviceQueue(vulkan_device_, vulkan_queue_family_, 0, &overlay->Surface()->queue);
 
-        VkCommandBufferBeginInfo begin_info =
-        {
-            .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-            .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT
-        };
+        VkCommandBufferBeginInfo begin_info = {};
+        begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 
         vk_result = vkBeginCommandBuffer(overlay->Surface()->command_buffers[i], &begin_info);
         VK_VALIDATE_RESULT(vk_result);
 
-        VkImageCreateInfo image_create_info =
-        {
-            .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
-            .imageType = VK_IMAGE_TYPE_2D,
-            .format = overlay->Surface()->texture_format.format,
-            .extent =
-            {
-                .width = overlay->Surface()->width,
-                .height = overlay->Surface()->height,
-                .depth = 1,
-            },
-            .mipLevels = 1,
-            .arrayLayers = 1,
-            .samples = VK_SAMPLE_COUNT_1_BIT,
-            .tiling = VK_IMAGE_TILING_OPTIMAL,
-            .usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
-            .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED
-        };
+        VkImageCreateInfo image_create_info = {};
+        image_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+        image_create_info.imageType = VK_IMAGE_TYPE_2D;
+        image_create_info.format = overlay->Surface()->texture_format.format;
+        image_create_info.extent.width = overlay->Surface()->width;
+        image_create_info.extent.height = overlay->Surface()->height;
+        image_create_info.extent.depth = 1;
+        image_create_info.mipLevels = 1;
+        image_create_info.arrayLayers = 1;
+        image_create_info.samples = VK_SAMPLE_COUNT_1_BIT;
+        image_create_info.tiling = VK_IMAGE_TILING_OPTIMAL;
+        image_create_info.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+        image_create_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 
         vk_result = vkCreateImage(vulkan_device_, &image_create_info, nullptr, &overlay->Surface()->textures[i]);
         VK_VALIDATE_RESULT(vk_result);
@@ -340,12 +321,10 @@ auto VulkanRenderer::SetupSurface(Overlay* overlay, uint32_t width, uint32_t hei
         VkMemoryRequirements memory_requirements = {};
         vkGetImageMemoryRequirements(vulkan_device_, overlay->Surface()->textures[i], &memory_requirements);
 
-        VkMemoryAllocateInfo memory_alloc_info =
-        {
-            .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
-            .allocationSize = memory_requirements.size,
-            .memoryTypeIndex = find_memory_type_index(memory_requirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT),
-        };
+        VkMemoryAllocateInfo memory_alloc_info = {};
+        memory_alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+        memory_alloc_info.allocationSize = memory_requirements.size;
+        memory_alloc_info.memoryTypeIndex = find_memory_type_index(memory_requirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
         vk_result = vkAllocateMemory(vulkan_device_, &memory_alloc_info, nullptr, &overlay->Surface()->texture_memories[i]);
         VK_VALIDATE_RESULT(vk_result);
@@ -354,57 +333,44 @@ auto VulkanRenderer::SetupSurface(Overlay* overlay, uint32_t width, uint32_t hei
         VK_VALIDATE_RESULT(vk_result);
 
 
-        VkImageViewCreateInfo image_view_info =
-        {
-            .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
-            .image = overlay->Surface()->textures[i],
-            .viewType = VK_IMAGE_VIEW_TYPE_2D,
-            .format = overlay->Surface()->texture_format.format,
-            .components = {
-                .r = VK_COMPONENT_SWIZZLE_R,
-                .g = VK_COMPONENT_SWIZZLE_G,
-                .b = VK_COMPONENT_SWIZZLE_B,
-                .a = VK_COMPONENT_SWIZZLE_A,
-            },
-            .subresourceRange = {
-                .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-                .baseMipLevel = 0,
-                .levelCount = 1,
-                .baseArrayLayer = 0,
-                .layerCount = 1,
-            },
-        };
+        VkImageViewCreateInfo image_view_info = {};
+        image_view_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+        image_view_info.image = overlay->Surface()->textures[i];
+        image_view_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
+        image_view_info.format = overlay->Surface()->texture_format.format;
+        image_view_info.components.r = VK_COMPONENT_SWIZZLE_R;
+        image_view_info.components.g = VK_COMPONENT_SWIZZLE_G;
+        image_view_info.components.b = VK_COMPONENT_SWIZZLE_B;
+        image_view_info.components.a = VK_COMPONENT_SWIZZLE_A;
+        image_view_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        image_view_info.subresourceRange.baseMipLevel = 0;
+        image_view_info.subresourceRange.levelCount = 1;
+        image_view_info.subresourceRange.baseArrayLayer = 0;
+        image_view_info.subresourceRange.layerCount = 1;
 
         vk_result = vkCreateImageView(vulkan_device_, &image_view_info, vulkan_allocator_, &overlay->Surface()->texture_views[i]);
         VK_VALIDATE_RESULT(vk_result);
 
-        VkImageMemoryBarrier barrier =
-        {
-            .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-            .srcAccessMask = 0,
-            .dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
-            .oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
-            .newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-            .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-            .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-            .image = overlay->Surface()->textures[i],
-            .subresourceRange =
-            {
-                .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-                .baseMipLevel = 0,
-                .levelCount = 1,
-                .baseArrayLayer = 0,
-                .layerCount = 1,
-            },
-        };
+        VkImageMemoryBarrier barrier = {};
+        barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+        barrier.srcAccessMask = 0;
+        barrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+        barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        barrier.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+        barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        barrier.image = overlay->Surface()->textures[i];
+        barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        barrier.subresourceRange.baseMipLevel = 0;
+        barrier.subresourceRange.levelCount = 1;
+        barrier.subresourceRange.baseArrayLayer = 0;
+        barrier.subresourceRange.layerCount = 1;
 
         vkCmdPipelineBarrier(overlay->Surface()->command_buffers[i], VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
 
-        VkFenceCreateInfo fence_create_info =
-        {
-            .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
-            .flags = VK_FENCE_CREATE_SIGNALED_BIT,
-        };
+        VkFenceCreateInfo fence_create_info = {};
+        fence_create_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+        fence_create_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
         vk_result = vkCreateFence(vulkan_device_, &fence_create_info, vulkan_allocator_, &overlay->Surface()->fences[i]);
         VK_VALIDATE_RESULT(vk_result);
@@ -412,19 +378,14 @@ auto VulkanRenderer::SetupSurface(Overlay* overlay, uint32_t width, uint32_t hei
         vk_result = vkEndCommandBuffer(overlay->Surface()->command_buffers[i]);
         VK_VALIDATE_RESULT(vk_result);
 
-        VkSubmitInfo submit_info = {
-            .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
-            .commandBufferCount = 1,
-            .pCommandBuffers = &overlay->Surface()->command_buffers[i],
-        };
-
-        
+        VkSubmitInfo submit_info = {};
+        submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        submit_info.commandBufferCount = 1;
+        submit_info.pCommandBuffers = &overlay->Surface()->command_buffers[i];
 
         VkFence init_fence = {};
-        VkFenceCreateInfo init_fence_info =
-        {
-            .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO
-        };
+        VkFenceCreateInfo init_fence_info = {};
+        init_fence_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
 
         vk_result = vkCreateFence(vulkan_device_, &init_fence_info, nullptr, &init_fence);
         VK_VALIDATE_RESULT(vk_result);
@@ -448,47 +409,35 @@ auto VulkanRenderer::RenderSurface(ImDrawData* draw_data, Overlay* overlay) cons
 
     VkResult vk_result = {};
 
-    VkCommandBufferBeginInfo buffer_begin_info =
-    {
-        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-        .flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT,
-    };
+    VkCommandBufferBeginInfo buffer_begin_info = {};
+    buffer_begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    buffer_begin_info.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
 
-    VkRenderingAttachmentInfoKHR color_attachment =
-    {
-        .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO_KHR,
-        .imageView = overlay->Surface()->texture_views[idx],
-        .imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-        .resolveMode = VK_RESOLVE_MODE_NONE_KHR,
-        .resolveImageView = VK_NULL_HANDLE,
-        .resolveImageLayout = VK_IMAGE_LAYOUT_UNDEFINED,
-        .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
-        .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
-        .clearValue = {
-            .color = {
-                .float32 = {  0.0f, 0.0f, 0.0f, 0.0f },
-            },
-        },
-    };
+    VkRenderingAttachmentInfoKHR color_attachment = {};
+    color_attachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO_KHR;
+    color_attachment.imageView = overlay->Surface()->texture_views[idx];
+    color_attachment.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    color_attachment.resolveMode = VK_RESOLVE_MODE_NONE_KHR;
+    color_attachment.resolveImageView = VK_NULL_HANDLE;
+    color_attachment.resolveImageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    color_attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    color_attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+    color_attachment.clearValue.color.float32[0] = 0.0f;
+    color_attachment.clearValue.color.float32[1] = 0.0f;
+    color_attachment.clearValue.color.float32[2] = 0.0f;
+    color_attachment.clearValue.color.float32[3] = 0.0f;
 
-    VkRenderingInfoKHR rendering_info = {
-        .sType = VK_STRUCTURE_TYPE_RENDERING_INFO_KHR,
-        .flags = 0,
-        .renderArea =
-         {
-            .extent =
-            {
-                .width = overlay->Surface()->width,
-                .height = overlay->Surface()->height,
-            },
-        },
-        .layerCount = 1,
-        .viewMask = 0,
-        .colorAttachmentCount = 1,
-        .pColorAttachments = &color_attachment,
-        .pDepthAttachment = nullptr,
-        .pStencilAttachment = nullptr,
-    };
+    VkRenderingInfoKHR rendering_info = {};
+    rendering_info.sType = VK_STRUCTURE_TYPE_RENDERING_INFO_KHR;
+    rendering_info.flags = 0;
+    rendering_info.renderArea.extent.width = overlay->Surface()->width;
+    rendering_info.renderArea.extent.height = overlay->Surface()->height;
+    rendering_info.layerCount = 1;
+    rendering_info.viewMask = 0;
+    rendering_info.colorAttachmentCount = 1;
+    rendering_info.pColorAttachments = &color_attachment;
+    rendering_info.pDepthAttachment = nullptr;
+    rendering_info.pStencilAttachment = nullptr;
 
     vk_result = vkWaitForFences(vulkan_device_, 1, &overlay->Surface()->fences[idx], VK_TRUE, UINT64_MAX);
     VK_VALIDATE_RESULT(vk_result);
@@ -500,23 +449,20 @@ auto VulkanRenderer::RenderSurface(ImDrawData* draw_data, Overlay* overlay) cons
     VK_VALIDATE_RESULT(vk_result);
 
     if (!overlay->Surface()->first_use[idx]) {
-        VkImageMemoryBarrier barrier_restore = {
-            .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-            .srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT,
-            .dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
-            .oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-            .newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-            .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-            .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-            .image = overlay->Surface()->textures[idx],
-            .subresourceRange = {
-                .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-                .baseMipLevel = 0,
-                .levelCount = 1,
-                .baseArrayLayer = 0,
-                .layerCount = 1,
-            },
-        };
+        VkImageMemoryBarrier barrier_restore = {};
+        barrier_restore.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+        barrier_restore.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+        barrier_restore.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+        barrier_restore.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+        barrier_restore.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+        barrier_restore.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        barrier_restore.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        barrier_restore.image = overlay->Surface()->textures[idx];
+        barrier_restore.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        barrier_restore.subresourceRange.baseMipLevel = 0;
+        barrier_restore.subresourceRange.levelCount = 1;
+        barrier_restore.subresourceRange.baseArrayLayer = 0;
+        barrier_restore.subresourceRange.layerCount = 1;
 
         vkCmdPipelineBarrier(
             overlay->Surface()->command_buffers[idx],
@@ -537,37 +483,30 @@ auto VulkanRenderer::RenderSurface(ImDrawData* draw_data, Overlay* overlay) cons
     ImGui_ImplVulkan_RenderDrawData(draw_data, overlay->Surface()->command_buffers[idx]);
     f_vkCmdEndRenderingKHR(overlay->Surface()->command_buffers[idx]);
 
-    VkImageMemoryBarrier barrier_optimal =
-    {
-        .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-        .srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
-        .dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT,
-        .oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-        .newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-        .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-        .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-        .image = overlay->Surface()->textures[idx],
-        .subresourceRange =
-        {
-            .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-            .baseMipLevel = 0,
-            .levelCount = 1,
-            .baseArrayLayer = 0,
-            .layerCount = 1,
-        },
-    };
+    VkImageMemoryBarrier barrier_optimal = {};
+    barrier_optimal.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+    barrier_optimal.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+    barrier_optimal.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+    barrier_optimal.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    barrier_optimal.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+    barrier_optimal.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    barrier_optimal.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    barrier_optimal.image = overlay->Surface()->textures[idx];
+    barrier_optimal.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    barrier_optimal.subresourceRange.baseMipLevel = 0;
+    barrier_optimal.subresourceRange.levelCount = 1;
+    barrier_optimal.subresourceRange.baseArrayLayer = 0;
+    barrier_optimal.subresourceRange.layerCount = 1;
 
     vkCmdPipelineBarrier(overlay->Surface()->command_buffers[idx], VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier_optimal);
 
     vk_result = vkEndCommandBuffer(overlay->Surface()->command_buffers[idx]);
     VK_VALIDATE_RESULT(vk_result);
 
-    VkSubmitInfo submit_info_barrier =
-    {
-        .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
-        .commandBufferCount = 1,
-        .pCommandBuffers = &overlay->Surface()->command_buffers[idx],
-    };
+    VkSubmitInfo submit_info_barrier = {};
+    submit_info_barrier.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submit_info_barrier.commandBufferCount = 1;
+    submit_info_barrier.pCommandBuffers = &overlay->Surface()->command_buffers[idx];
 
     vk_result = vkQueueSubmit(overlay->Surface()->queue, 1, &submit_info_barrier, overlay->Surface()->fences[idx]);
     VK_VALIDATE_RESULT(vk_result);

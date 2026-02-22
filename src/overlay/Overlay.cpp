@@ -181,11 +181,12 @@ Overlay::Overlay(const std::string& appKey, const std::string& name, vr::VROverl
     VkPipelineRenderingCreateInfoKHR pipeline_rendering_create_info =
     {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR,
+        .pNext = nullptr,
         .viewMask = 0,
         .colorAttachmentCount = 1,
         .pColorAttachmentFormats = &surface_format.format,
         .depthAttachmentFormat = VK_FORMAT_UNDEFINED,
-        .stencilAttachmentFormat = VK_FORMAT_UNDEFINED,
+        .stencilAttachmentFormat = VK_FORMAT_UNDEFINED
     };
 
     ImGui_ImplVulkan_InitInfo init_info = {
@@ -202,10 +203,12 @@ Overlay::Overlay(const std::string& appKey, const std::string& name, vr::VROverl
         .MSAASamples = VK_SAMPLE_COUNT_1_BIT,
         .PipelineCache = g_vulkanRenderer->PipelineCache(),
         .Subpass = 0,
+        .DescriptorPoolSize = 0,
         .UseDynamicRendering = true,
         .PipelineRenderingCreateInfo = pipeline_rendering_create_info,
         .Allocator = g_vulkanRenderer->Allocator(),
         .CheckVkResultFn = nullptr,
+        .MinAllocationSize = 1024*1024,
     };
 
     ImGui_ImplVulkan_Init(&init_info);

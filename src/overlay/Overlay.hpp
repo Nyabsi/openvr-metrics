@@ -1,6 +1,8 @@
 #pragma once
 
 #include <string>
+#include <memory>
+
 #include <imgui.h>
 
 #include <extension/OpenVR/VrOverlay.h>
