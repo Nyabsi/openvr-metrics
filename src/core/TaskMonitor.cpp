@@ -150,7 +150,7 @@ auto TaskMonitor::Update() -> void
     for (auto it = process_list_.begin(); it != process_list_.end(); ) {
         // If the process name is empty but allocates VRAM it's an system process
         // it's removed because Task Manager removes these processes as well.
-        if (it->second.process_name.empty() || it->second.process_name.find("Idle") != std::string::npos || it->second.process_name.find("_Total") != std::string::npos) {
+        if (it->second.process_name.empty() || it->second.process_name.find("Idle") != std::string::npos || it->second.process_name.find("_Total") != std::string::npos || it->second.process_name.find("metrics_overlay") != std::string::npos) {
             it = process_list_.erase(it);
         }
         else {
