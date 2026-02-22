@@ -67,6 +67,18 @@ bool ImGui_ImplOpenVR_Init(ImGui_ImplOpenVR_InitInfo* initInfo)
     bd->keyboard_active = false;
     bd->laser_hit_dirty = false;
 
+    io.DisplaySize = ImVec2(bd->width, bd->height);
+    io.DisplayFramebufferScale = ImVec2(1, 1);
+    bd->mouse_scale = { io.DisplaySize.x, io.DisplaySize.y };
+    vr::VROverlay()->SetOverlayMouseScale(bd->handle, &bd->mouse_scale);
+
+    vr::VRTextureBounds_t bounds;
+    bounds.uMin = 0.0f;
+    bounds.uMax = 1.0f;
+    bounds.vMin = 0.0f;
+    bounds.vMax = 1.0f;
+    vr::VROverlay()->SetOverlayTextureBounds(bd->handle, &bounds);
+
 #ifdef _WIN32
     uint64_t perf_frequency = {};
     if (!QueryPerformanceFrequency((LARGE_INTEGER*)&perf_frequency))
@@ -394,20 +406,6 @@ void ImGui_ImplOpenVR_NewFrame()
     if (vr::VROverlay()->IsOverlayVisible(bd->handle) && !bd->keyboard_active && io.WantTextInput) {
         vr::VROverlay()->ShowKeyboardForOverlay(bd->handle, vr::k_EGamepadTextInputModeNormal, vr::k_EGamepadTextInputLineModeSingleLine, vr::KeyboardFlag_Minimal | vr::KeyboardFlag_HideDoneKey | vr::KeyboardFlag_ShowArrowKeys, "ImGui OpenVR Virtual Keyboard", 1, "", NULL);
         bd->keyboard_active = true;
-    }
-
-    io.DisplaySize = ImVec2(bd->width, bd->height);
-    if (bd->width > 0 && bd->height > 0) {
-        io.DisplayFramebufferScale = ImVec2(1, 1);
-        bd->mouse_scale = { io.DisplaySize.x, io.DisplaySize.y };
-        vr::VROverlay()->SetOverlayMouseScale(bd->handle, &bd->mouse_scale);
-
-        vr::VRTextureBounds_t bounds;
-        bounds.uMin = 0.0f;
-        bounds.uMax = 1.0f;
-        bounds.vMin = 0.0f;
-        bounds.vMax = 1.0f;
-        vr::VROverlay()->SetOverlayTextureBounds(bd->handle, &bounds);
     }
 
     if (bd->laser_hit_dirty) {
