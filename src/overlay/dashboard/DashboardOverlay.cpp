@@ -3,6 +3,10 @@
 #include <algorithm>
 #include <chrono>
 
+#ifdef __linux
+#include <signal.h>
+#endif
+
 #include <SDL3/SDL.h>
 
 #include <imgui.h>
@@ -93,6 +97,103 @@ auto DashboardOverlay::Render()-> bool
         ImGuiTableFlags_SizingStretchProp |
         ImGuiTableFlags_Sortable;
 
+#ifdef __linux
+    if (ImGui::BeginTable("process_list", 5, flags))
+    {
+        ImGui::TableSetupColumn("PID");
+        ImGui::TableSetupColumn("Name");
+        ImGui::TableSetupColumn("CPU %");
+        ImGui::TableSetupColumn("RAM");
+        ImGui::TableSetupColumn("Actions");
+        ImGui::TableHeadersRow();
+
+        ImGuiTableSortSpecs* sort_specs = ImGui::TableGetSortSpecs();
+
+        bool sort_changed =
+            sort_specs &&
+            (g_cached_sort.SpecsCount != sort_specs->SpecsCount ||
+                memcmp(&g_cached_sort, sort_specs, sizeof(ImGuiTableSortSpecs)) != 0);
+
+        if (g_rows_dirty || sort_changed)
+        {
+            g_cached_rows.clear();
+            g_cached_rows.reserve(task_monitor_.Processes().size());
+
+            for (auto& [pid, info] : task_monitor_.Processes())
+            {
+                g_cached_rows.push_back({
+                    pid,
+                    info,
+                    {}
+                });
+            }
+
+            if (sort_specs && sort_specs->SpecsCount > 0)
+            {
+                const auto& s = sort_specs->Specs[0];
+
+                std::sort(g_cached_rows.begin(), g_cached_rows.end(),
+                    [&](const CachedProcessRow& a,
+                        const CachedProcessRow& b)
+                    {
+                        switch (s.ColumnIndex)
+                        {
+                            case 0: return s.SortDirection == ImGuiSortDirection_Ascending
+                                ? a.pid < b.pid : a.pid > b.pid;
+
+                            case 1: return s.SortDirection == ImGuiSortDirection_Ascending
+                                ? a.info.process_name < b.info.process_name
+                                : a.info.process_name > b.info.process_name;
+
+                            case 2: return s.SortDirection == ImGuiSortDirection_Ascending
+                                ? a.info.cpu.total_cpu_usage < b.info.cpu.total_cpu_usage
+                                : a.info.cpu.total_cpu_usage > b.info.cpu.total_cpu_usage;
+
+                            case 3: return s.SortDirection == ImGuiSortDirection_Ascending
+                                ? a.info.memory_usage <
+                                b.info.memory_usage
+                                : a.info.memory_usage >
+                                b.info.memory_usage;
+                            }
+                            return false;
+                    });
+            }
+
+            if (sort_specs)
+                g_cached_sort = *sort_specs;
+
+            g_rows_dirty = false;
+        }
+
+        for (auto& row : g_cached_rows)
+        {
+            ImGui::TableNextRow();
+
+            ImGui::TableSetColumnIndex(0);
+            ImGui::Text("%u", row.pid);
+
+            ImGui::TableSetColumnIndex(1);
+            ImGui::Text("%s", row.info.process_name.c_str());
+
+            ImGui::TableSetColumnIndex(2);
+            ImGui::Text("%.1f %%", row.info.cpu.total_cpu_usage);
+
+            ImGui::TableSetColumnIndex(3);
+            ImGui::Text("%.0f MB",
+                row.info.memory_usage / (1024.0f * 1024.0f));
+
+            ImGui::TableSetColumnIndex(4);
+            ImGui::PushID(row.pid);
+            if (ImGui::Button("Kill"))
+            {
+                kill(row.pid, SIGTERM);
+            }
+            ImGui::PopID();
+        }
+
+        ImGui::EndTable();
+    }
+#else
     if (ImGui::BeginTable("process_list", 9, flags))
     {
         ImGui::TableSetupColumn("PID");
@@ -231,6 +332,7 @@ auto DashboardOverlay::Render()-> bool
 
         ImGui::EndTable();
     }
+#endif
 
     ImGui::EndChild();
     ImGui::End();

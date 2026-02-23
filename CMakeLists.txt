@@ -44,13 +44,13 @@ set(SOURCES
     "src/core/Settings.cpp"
     "src/overlay/Overlay.cpp"
     "src/overlay/controller/ControllerOverlay.cpp"
+    "src/overlay/dashboard/DashboardOverlay.cpp"
     "src/renderer/VulkanRenderer.cpp"
 )
 
 if (WIN32)
     list(APPEND SOURCES
         "src/core/monitor/TaskMonitor_Win32.cpp"
-        "src/overlay/dashboard/DashboardOverlay.cpp"
     )
 endif()
 
