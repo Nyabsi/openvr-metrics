@@ -47,10 +47,16 @@ set(SOURCES
     "src/renderer/VulkanRenderer.cpp"
 )
 
-if (NOT UNIX OR APPLE)
+if (WIN32)
     list(APPEND SOURCES
-        "src/core/TaskMonitor.cpp"
+        "src/core/monitor/TaskMonitor_Win32.cpp"
         "src/overlay/dashboard/DashboardOverlay.cpp"
+    )
+endif()
+
+if (UNIX)
+    list(APPEND SOURCES
+        "src/core/monitor/TaskMonitor_Linux.cpp"
     )
 endif()
 
@@ -98,6 +104,6 @@ add_custom_command(
     TARGET metrics_overlay POST_BUILD
     COMMENT "Copying Executable and DLLs"
     COMMAND ${CMAKE_COMMAND} -E copy -t ${CUSTOM_OUTPUT_DIR} $<TARGET_FILE:metrics_overlay>
-    COMMAND ${CMAKE_COMMAND} -E copy -t ${CUSTOM_OUTPUT_DIR} $<TARGET_RUNTIME_DLLS:metrics_overlay>
+    COMMAND ${CMAKE_COMMAND} -E copy -t ${CUSTOM_OUTPUT_DIR} $<TARGET_FILE:OpenVR::API>
     COMMAND_EXPAND_LISTS
 )

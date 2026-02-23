@@ -1,12 +1,17 @@
 #pragma once
 
+#ifndef __linux
 #include <Windows.h>
+#include <dxgi1_6.h>
 #include <pdh.h>
+#endif
+
 #include <string>
 #include <unordered_map>
 #include <stdint.h>
-#include <dxgi1_6.h>
 #include <ranges>
+#include <filesystem>
+#include <chrono>
 
 struct GpuEngine {
     uint32_t engine_index;
@@ -58,6 +63,7 @@ enum CpuMetric_Type : uint8_t {
     CpuMetric_Total_Time = 3,
 };
 
+#ifndef __linux
 inline auto getCurrentlyUsedGpu = [](const ProcessInfo& info) -> GpuInfo 
 {
     auto gpuIt = std::ranges::find_if(info.gpus, [](auto& gpuEntry) {
@@ -102,6 +108,7 @@ inline auto gpuVideoPercentage = [](const GpuInfo& gpu) -> float
     }
     return 0.0f;
 };
+#endif
 
 class TaskMonitor {
 public:
@@ -114,13 +121,17 @@ public:
     auto Update() -> void;
 	auto GetProcessInfoByPid(uint32_t pid) -> ProcessInfo;
 private:
+#ifndef __linux
     auto mapProcessesToPid(PDH_HCOUNTER counter) -> void;
     auto calculateGpuMetricFromCounter(PDH_HCOUNTER counter, GpuMetric_Type type) -> void;
     auto calculateCpuMetricFromCounter(PDH_HCOUNTER counter, CpuMetric_Type type) -> void;
     auto calculateMemoryMetricFromCounter(PDH_HCOUNTER counter) -> void;
-
+#else
+    auto ReadProcessJiffies(const std::filesystem::path& stat_path) -> std::pair<long, long>;
+#endif
     std::unordered_map<uint32_t, ProcessInfo> process_list_;
     std::unordered_map<std::string, uint32_t> process_map_;
+#ifndef __linux
     PDH_HQUERY pdh_query_;
     PDH_HCOUNTER pdh_processes_id_counter_;
 	PDH_HCOUNTER pdh_dedicated_vram_counter_;
@@ -134,4 +145,9 @@ private:
     MEMORYSTATUSEX system_memory_;
     IDXGIFactory6* dxgi_factory_;
     bool pdh_available_;
+#else
+    long last_total_jiffies_;
+    std::unordered_map<uint32_t, long> last_process_jiffies_;
+    std::chrono::time_point<std::chrono::steady_clock> last_update_time_;
+#endif
 };

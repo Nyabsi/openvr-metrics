@@ -80,9 +80,8 @@ ControllerOverlay::ControllerOverlay() : Overlay(OVERLAY_KEY, OVERLAY_NAME, vr::
     }
 
     ImPlot::CreateContext();
-#ifndef __linux
+
     task_monitor_.Initialize();
-#endif
     settings_.Load();
 
     display_mode_ = static_cast<Overlay_DisplayMode>(settings_.DisplayMode());
@@ -143,13 +142,12 @@ auto ControllerOverlay::Render() -> bool
                 this->Reset();
                 last_pid = pid;
             }
-#ifndef __linux
+
 			process_info_ = task_monitor_.GetProcessInfoByPid(pid);
+#ifndef __linux
             gpu_info_ = getCurrentlyUsedGpu(process_info_);
-            ImGui::Text("Current Application: %s (%d)", process_info_.process_name.c_str(), pid);
-#else
-            ImGui::Text("Current Application: (%d)", pid);
 #endif
+            ImGui::Text("Current Application: %s (%d)", process_info_.process_name.c_str(), pid);
         }
         else {
 			ImGui::Text("Current Application: SteamVR Void");
@@ -313,13 +311,13 @@ auto ControllerOverlay::Render() -> bool
 
             if (ImGui::BeginTable("##metrics_extra", 2, ImGuiTableFlags_SizingStretchProp)) {
                 ImGui::Indent(10.0f);
-#ifndef __linux
+
                 ImGui::TableNextRow();
                 ImGui::TableSetColumnIndex(0);
                 ImGui::Text("CPU");
                 ImGui::TableSetColumnIndex(1);
                 ImGui::Text("%.1f %%", process_info_.cpu.total_cpu_usage);
-#endif
+
                 ImGui::TableNextRow();
                 ImGui::TableSetColumnIndex(0);
                 ImGui::Text("FPS");
@@ -395,7 +393,7 @@ auto ControllerOverlay::Render() -> bool
                     ? (gpu_info_.memory.shared_vram_usage * 100.0f) / gpu_info_.memory.shared_available
                     : 0.0f
                 );
-
+#endif
                 ImGui::TableNextRow();
                 ImGui::TableSetColumnIndex(0);
                 ImGui::Text("RAM");
@@ -407,7 +405,7 @@ auto ControllerOverlay::Render() -> bool
                     ? (process_info_.memory_usage * 100.0f) / process_info_.memory_available
                     : 0.0f
                 );
-#endif
+
                 ImGui::TableNextRow();
                 ImGui::TableSetColumnIndex(0);
                 ImGui::Text("Bottleneck");
@@ -1084,13 +1082,12 @@ auto ControllerOverlay::Update() -> void
         fps_counter = ImGui::GetTime();
     }
 
-#ifndef __linux
     static double last_time = 0.0;
     if (ImGui::GetTime() - last_time >= 1.0f) {
         task_monitor_.Update();
         last_time = ImGui::GetTime();
     }
-#endif
+
     switch (this->DisplayMode()) {
         case Overlay_DisplayMode_Always:
         {
@@ -1143,9 +1140,9 @@ auto ControllerOverlay::Destroy() -> void
 {
     delete[] colour_mask_;
     colour_mask_ = nullptr;
-#ifndef __linux
+
     task_monitor_.Destroy();
-#endif
+
     ImPlot::DestroyContext();
 }
 

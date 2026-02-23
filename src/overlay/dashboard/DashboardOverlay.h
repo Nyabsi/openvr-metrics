@@ -4,7 +4,7 @@
 
 #include <imgui.h>
 
-#include <core/TaskMonitor.hpp>
+#include <core/monitor/TaskMonitor.hpp>
 #include <core/Settings.hpp>
 
 #include <overlay/Overlay.hpp>
