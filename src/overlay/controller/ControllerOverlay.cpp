@@ -322,10 +322,10 @@ auto ControllerOverlay::Render() -> bool
                 ImGui::TableSetColumnIndex(0);
                 ImGui::Text("FPS");
                 ImGui::TableSetColumnIndex(1);
-                if ((gpu_frame_times_[frame_index_].flags & FrameTimeInfo_Flags_Reprojecting))
-                    ImGui::TextColored(Color_Orange, "%1.f", current_fps_);
-                else if ((gpu_frame_times_[frame_index_].flags & FrameTimeInfo_Flags_OneThirdFramePresented))
+                if (current_fps_ < refresh_rate_ / 2)
                     ImGui::TextColored(Color_Red, "%1.f", current_fps_);
+                else if (current_fps_ < refresh_rate_)
+                    ImGui::TextColored(Color_Orange, "%1.f", current_fps_);
                 else
                     ImGui::Text("%1.f", current_fps_);
 
