@@ -9,7 +9,7 @@ OpenVR Metrics is a real-time VR performance monitoring tool designed for both d
 ## Download
 
 > [!NOTE]
-> Linux does not support `Installer` type distribution in Github, nor does it have other form of packaging ie. `AppImage` or `Flatpak`. The only official way to get automated updates for Linux is on [Steam](https://store.steampowered.com/app/4361360/OpenVR_Metrics/) consider obtaining the application from there to support the application development.
+> Linux does not support `Installer` type distribution in Github, nor does it have other form of packaging ie. `AppImage` or `Flatpak`. The only way to get automated updates for Linux is on [Steam](https://store.steampowered.com/app/4361360/OpenVR_Metrics/) consider obtaining the application from there to support the application development.
 
 To download the application, select the preferred download for your operating system below:
 
@@ -19,7 +19,7 @@ To download the application, select the preferred download for your operating sy
 - [Linux ARM64 (Portable)](https://github.com/Nyabsi/openvr-metrics/releases/latest/download/openvr-metrics-linux-aarch64-portable.zip)
 
 > [!IMPORTANT]
-> Linux builds are temporarily unavailable as of right now.
+> Linux builds are temporarily unavailable, they will be available starting from v1.6.0 upwards.
 
 ## Features
 
