@@ -411,15 +411,32 @@ auto ControllerOverlay::Render() -> bool
                 ImGui::Text("Bottleneck");
                 ImGui::TableSetColumnIndex(1);
 
-                if (bottleneck_flags_ & BottleneckSource_Flags_Wireless)
-                    ImGui::TextColored(Color_Orange, "%s", "Wireless");
-                else if (bottleneck_flags_ & BottleneckSource_Flags_CPU)
-                    ImGui::TextColored(Color_Orange, "%s", "CPU");
-                else if (bottleneck_flags_ & BottleneckSource_Flags_GPU)
-                    ImGui::TextColored(Color_Orange, "%s", "GPU");
+                if (bottleneck_flags_ == BottleneckSource_Flags_None)
+                {
+                    ImGui::TextColored(Color_Green, "None");
+                }
                 else
-                    ImGui::TextColored(Color_Green, "%s", "None");
+                {
+                    std::string label;
 
+                    auto append = [&](const char* text)
+                        {
+                            if (!label.empty())
+                                label += " & ";
+                            label += text;
+                        };
+
+                    if (bottleneck_flags_ & BottleneckSource_Flags_Wireless)
+                        append("Wireless");
+
+                    if (bottleneck_flags_ & BottleneckSource_Flags_CPU)
+                        append("CPU");
+
+                    if (bottleneck_flags_ & BottleneckSource_Flags_GPU)
+                        append("GPU");
+
+                    ImGui::TextColored(Color_Orange, "%s", label.c_str());
+                }
 
                 ImGui::Unindent(10.0f);
 
@@ -951,25 +968,90 @@ auto ControllerOverlay::Update() -> void
         total_dropped_frames_ += timings.m_nNumDroppedFrames;
         total_throttled_frames_ += throttled_frames;
 
-        static BottleneckSource_Flags stable_bottleneck_flags = BottleneckSource_Flags_None;
-        static BottleneckSource_Flags last_detected_flags = BottleneckSource_Flags_None;
-        static int consecutive_bottleneck_frames = 0;
-        static int consecutive_clear_frames = 0;
+        static uint32_t stable_bottleneck_flags = BottleneckSource_Flags_None;
+
+        static int gpu_trigger_frames = 0;
+        static int gpu_clear_frames = 0;
+
+        static int cpu_trigger_frames = 0;
+        static int cpu_clear_frames = 0;
+
+        static int wireless_trigger_frames = 0;
+        static int wireless_clear_frames = 0;
 
         constexpr int kTriggerThreshold = 5;
         constexpr int kClearThreshold = 10;
 
-        BottleneckSource_Flags detected_flags = BottleneckSource_Flags_None;
-        if (wireless_latency_ >= 15.0f)
-            detected_flags = BottleneckSource_Flags_Wireless;
-        else if ((gpu_frame_times_[frame_index_].flags & FrameTimeInfo_Flags_Reprojecting || gpu_frame_times_[frame_index_].flags & FrameTimeInfo_Flags_OneThirdFramePresented) &&
-            static_cast<int>(current_fps_) != static_cast<int>(refresh_rate_))
-            detected_flags = BottleneckSource_Flags_GPU;
-        else if ((cpu_frame_times_[frame_index_].flags & FrameTimeInfo_Flags_Frame_Cpu_Stalled) && static_cast<int>(current_fps_) != static_cast<int>(refresh_rate_))
-            detected_flags = BottleneckSource_Flags_CPU;
+        bool gpu_detected = false;
+        bool cpu_detected = false;
+        bool wireless_detected = false;
 
-        if (detected_flags == stable_bottleneck_flags) {
-            consecutive_clear_frames = 0;
+        if (wireless_latency_ >= 15.0f)
+            wireless_detected = true;
+
+        if (gpu_frame_times_[frame_index_].flags != 0 &&
+            static_cast<int>(gpu_frame_time_ms_) != static_cast<int>(frame_time_))
+            gpu_detected = true;
+
+        if (cpu_frame_times_[frame_index_].flags != 0 &&
+            static_cast<int>(cpu_frame_time_ms_) != static_cast<int>(frame_time_))
+            cpu_detected = true;
+
+        bool gpu_stable = (stable_bottleneck_flags & BottleneckSource_Flags_GPU) != 0;
+
+        if (gpu_detected)
+        {
+            gpu_clear_frames = 0;
+
+            if (!gpu_stable)
+            {
+                if (++gpu_trigger_frames >= kTriggerThreshold)
+                {
+                    stable_bottleneck_flags |= BottleneckSource_Flags_GPU;
+                    gpu_trigger_frames = 0;
+                }
+            }
+        }
+        else
+        {
+            gpu_trigger_frames = 0;
+
+            if (gpu_stable)
+            {
+                if (++gpu_clear_frames >= kClearThreshold)
+                {
+                    stable_bottleneck_flags &= ~BottleneckSource_Flags_GPU;
+                    gpu_clear_frames = 0;
+                }
+            }
+        }
+
+        bool cpu_stable = (stable_bottleneck_flags & BottleneckSource_Flags_CPU) != 0;
+
+        if (cpu_detected)
+        {
+            cpu_clear_frames = 0;
+
+            if (!cpu_stable)
+            {
+                if (++cpu_trigger_frames >= kTriggerThreshold)
+                {
+                    stable_bottleneck_flags |= BottleneckSource_Flags_CPU;
+                    cpu_trigger_frames = 0;
+                }
+            }
+        }
+        else
+        {
+            cpu_trigger_frames = 0;
+
+            if (cpu_stable)
+            {
+                if (++cpu_clear_frames >= kClearThreshold)
+                {
+                    stable_bottleneck_flags &= ~BottleneckSource_Flags_CPU;
+                    cpu_clear_frames = 0;
+                }
         }
         else if (detected_flags != BottleneckSource_Flags_None) {
             if (detected_flags == last_detected_flags) {
@@ -979,25 +1061,41 @@ auto ControllerOverlay::Update() -> void
                     consecutive_bottleneck_frames = 0;
                     consecutive_clear_frames = 0;
                 }
+
+        bool wireless_stable = (stable_bottleneck_flags & BottleneckSource_Flags_Wireless) != 0;
+
+        if (wireless_detected)
+        {
+            wireless_clear_frames = 0;
+
+            if (!wireless_stable)
+            {
+                if (++wireless_trigger_frames >= kTriggerThreshold)
+                {
+                    stable_bottleneck_flags |= BottleneckSource_Flags_Wireless;
+                    wireless_trigger_frames = 0;
             }
             else {
                 last_detected_flags = detected_flags;
                 consecutive_bottleneck_frames = 1;
             }
         }
-        else {
-            if (stable_bottleneck_flags != BottleneckSource_Flags_None) {
-                consecutive_clear_frames++;
-                if (consecutive_clear_frames >= kClearThreshold) {
-                    stable_bottleneck_flags = BottleneckSource_Flags_None;
-                    consecutive_bottleneck_frames = 0;
-                    consecutive_clear_frames = 0;
+        else
+        {
+            wireless_trigger_frames = 0;
+
+            if (wireless_stable)
+            {
+                if (++wireless_clear_frames >= kClearThreshold)
+                {
+                    stable_bottleneck_flags &= ~BottleneckSource_Flags_Wireless;
+                    wireless_clear_frames = 0;
                 }
             }
         }
 
         bottleneck_flags_ = stable_bottleneck_flags;
-        bottleneck_ = (bottleneck_flags_ != BottleneckSource_Flags_None);
+        bottleneck_ = (stable_bottleneck_flags != BottleneckSource_Flags_None);
 
         uint64_t now_ms = SDL_GetTicks();
         if (!performance_alerts_.empty() && (now_ms - performance_alerts_.back().timestamp > (3600ULL * 1000ULL))) 
