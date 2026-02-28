@@ -1,5 +1,6 @@
 #pragma once
 
+#include <array>
 #include <stdint.h>
 
 class Settings {
@@ -15,6 +16,7 @@ public:
 	[[nodiscard]] auto PostProcessingEnabled() const -> bool { return post_processing_enabled_; }
 	[[nodiscard]] auto ColorTemperature() const -> float { return color_temp_; }
 	[[nodiscard]] auto ColorBrightness() const -> float { return color_brightness_; }
+	[[nodiscard]] auto ColorMask() const -> std::array<float, 3> { return color_mask_; }
 
 	auto Load() -> void;
 
@@ -57,6 +59,11 @@ public:
 		color_brightness_ = brightness;
 		Save();
 	}
+
+	auto SetColorMask(const std::array<float, 3>& mask) -> void {
+		color_mask_ = mask;
+		Save();
+	}
 private:
 	auto Save() -> void;
 
@@ -68,4 +75,5 @@ private:
 	bool post_processing_enabled_;
 	float color_temp_;
 	float color_brightness_;
+	std::array<float, 3> color_mask_;
 };

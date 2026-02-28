@@ -1,5 +1,6 @@
 #pragma once
 
+#include <array>
 #include <vector>
 
 #include <imgui.h>
@@ -81,6 +82,8 @@ public:
     auto RemoveMonitoredDeviceById(uint32_t device_id) -> void;
 private:
     auto UpdateDeviceTransform() -> void;
+    auto UpdateResolutionScaleSettings() -> void;
+    auto UpdateDisplaySettings() -> void;
 
     TaskMonitor task_monitor_;
     Settings settings_;
@@ -124,10 +127,16 @@ private:
     ProcessInfo process_info_;
 
     bool color_temperature_;
+    bool prev_color_temperature_;
     float color_channel_red_;
     float color_channel_green_;
     float color_channel_blue_;
     float color_temp_;
+    float prev_color_temp_;
     float color_brightness_;
-    float* colour_mask_;
+    float prev_color_brightness_;
+    std::array<float, 3> colour_mask_;
+    std::array<float, 3> prev_colour_mask_;
+    bool prev_ss_scaling_enabled_;
+    float prev_ss_scale_;
 };
