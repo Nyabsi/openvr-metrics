@@ -10,6 +10,7 @@
 #include <backends/imgui_impl_vulkan.h>
 #include <extension/ImGui/backends/imgui_impl_openvr.h>
 #include <helper/ImHelper.h>
+#include <helper/ImPlotHelper.h>
 #include <implot.h>
 
 #include <extension/OpenVR/VrUtils.h>
@@ -173,12 +174,32 @@ auto ControllerOverlay::Render() -> bool
 
             ImVec2 plotSize = ImGui::GetContentRegionAvail();
 
-            static double t = 0.0;
-            t += ImGui::GetIO().DeltaTime;
 
             const int frame_count = static_cast<int>(refresh_rate_);
-            const float frame_dt = 1.0f / refresh_rate_;
+            const float frame_dt = refresh_rate_ > 0.0f ? (1.0f / refresh_rate_) : 0.0f;
             const double history = frame_count * frame_dt;
+
+            static std::vector<float> plot_x;
+            static std::vector<float> cpu_plot_y;
+            static std::vector<ImPlotHelper::PlotBandColor> cpu_plot_colors;
+
+            if (frame_count >= 2 && static_cast<int>(cpu_frame_times_.size()) >= frame_count) {
+                plot_x.resize(frame_count);
+                cpu_plot_y.resize(frame_count);
+                cpu_plot_colors.resize(frame_count - 1);
+
+                const int oldest_index = frame_index_;
+                for (int i = 0; i < frame_count; ++i) {
+                    const int ring_index = (oldest_index + i) % frame_count;
+
+                    plot_x[i] = -static_cast<float>((frame_count - 1) - i) * frame_dt;
+                    cpu_plot_y[i] = cpu_frame_times_[ring_index].frametime;
+
+                    if (i < frame_count - 1) {
+                        cpu_plot_colors[i] = ImPlotHelper::GetCpuPlotBandFromFlags(cpu_frame_times_[ring_index].flags);
+                    }
+                }
+            }
 
             if (ImPlot::BeginPlot("##frameplotimer", plotSize,
                 ImPlotFlags_CanvasOnly | ImPlotFlags_NoFrame)) {
@@ -197,37 +218,8 @@ auto ControllerOverlay::Render() -> bool
                 static double y_ticks[1] = { frame_time_ };
                 ImPlot::SetupAxisTicks(ImAxis_Y1, y_ticks, 1, nullptr, false);
 
-                for (int i = 0; i < static_cast<int>(refresh_rate_) - 1; ++i) {
-
-                    ImVec4 color;
-                    if (cpu_frame_times_[i].flags & FrameTimeInfo_Flags_Reprojecting)
-                        color = Color_Orange;
-                    else if (cpu_frame_times_[i].flags & FrameTimeInfo_Flags_MotionSmoothingEnabled)
-                        color = Color_Yellow;
-                    else if (cpu_frame_times_[i].flags & FrameTimeInfo_Flags_OneThirdFramePresented)
-                        color = Color_Red;
-                    else if (cpu_frame_times_[i].flags & FrameTimeInfo_Flags_Frame_LateStart)
-                        color = Color_Red;
-                    else if (cpu_frame_times_[i].flags & FrameTimeInfo_Flags_Frame_Dropped)
-                        color = Color_Magenta;
-                    else if (cpu_frame_times_[i].flags & FrameTimeInfo_Flags_Frame_Cpu_Stalled)
-                        color = Color_Purple;
-                    else if (cpu_frame_times_[i].flags & FrameTimeInfo_Flags_PredictedAhead)
-                        color = Color_LightBlue;
-                    else if (cpu_frame_times_[i].flags & FrameTimeInfo_Flags_Frame_Throttled)
-                        color = Color_PinkishRed;
-                    else
-                        color = Color_Green;
-
-                    color.w *= 0.5f;
-
-                    float seg_x[2] = { -i * frame_dt, -(i + 1) * frame_dt };
-                    float seg_y[2] = { cpu_frame_times_[i].frametime, cpu_frame_times_[i + 1].frametime };
-                    constexpr float seg_ybase[2] = { 0.0f, 0.0f };
-
-                    ImPlot::PushStyleColor(ImPlotCol_Fill, ImGui::ColorConvertFloat4ToU32(color));
-                    ImPlot::PlotShaded(("##shaded" + std::to_string(i)).c_str(), seg_x, seg_ybase, seg_y, 2);
-                    ImPlot::PopStyleColor();
+                if (!cpu_plot_colors.empty()) {
+                    ImPlotHelper::PlotShadedRuns("##cpu_shaded", plot_x, cpu_plot_y, cpu_plot_colors);
                 }
 
                 ImPlot::EndPlot();
@@ -250,12 +242,31 @@ auto ControllerOverlay::Render() -> bool
                 ImGui::EndTable();
             }
 
-            static double t = 0.0;
-            t += ImGui::GetIO().DeltaTime;
-
             const int frame_count = static_cast<int>(refresh_rate_);
-            const float frame_dt = 1.0f / refresh_rate_;
+            const float frame_dt = refresh_rate_ > 0.0f ? (1.0f / refresh_rate_) : 0.0f;
             const double history = frame_count * frame_dt;
+
+            static std::vector<float> plot_x;
+            static std::vector<float> gpu_plot_y;
+            static std::vector<ImPlotHelper::PlotBandColor> gpu_plot_colors;
+
+            if (frame_count >= 2 && static_cast<int>(gpu_frame_times_.size()) >= frame_count) {
+                plot_x.resize(frame_count);
+                gpu_plot_y.resize(frame_count);
+                gpu_plot_colors.resize(frame_count - 1);
+
+                const int oldest_index = frame_index_;
+                for (int i = 0; i < frame_count; ++i) {
+                    const int ring_index = (oldest_index + i) % frame_count;
+
+                    plot_x[i] = -static_cast<float>((frame_count - 1) - i) * frame_dt;
+                    gpu_plot_y[i] = gpu_frame_times_[ring_index].frametime;
+
+                    if (i < frame_count - 1) {
+                        gpu_plot_colors[i] = ImPlotHelper::GetGpuPlotBandFromFlags(gpu_frame_times_[ring_index].flags);
+                    }
+                }
+            }
 
             ImVec2 plotSize = ImGui::GetContentRegionAvail();
             if (ImPlot::BeginPlot("Frametime Spikes GPU", plotSize, ImPlotFlags_CanvasOnly | ImPlotFlags_NoFrame)) {
@@ -272,30 +283,8 @@ auto ControllerOverlay::Render() -> bool
                 static double y_ticks[1] = { frame_time_ };
                 ImPlot::SetupAxisTicks(ImAxis_Y1, y_ticks, 1, nullptr, false);
 
-                for (int i = 0; i < static_cast<int>(refresh_rate_) - 1; ++i) {
-
-                    ImVec4 color = {};
-
-                    if (gpu_frame_times_[i].flags & FrameTimeInfo_Flags_Reprojecting)
-                        color = Color_Orange;
-                    else if (gpu_frame_times_[i].flags & FrameTimeInfo_Flags_MotionSmoothingEnabled)
-                        color = Color_Yellow;
-                    else if (gpu_frame_times_[i].flags & FrameTimeInfo_Flags_OneThirdFramePresented)
-                        color = Color_Red;
-                    else if (gpu_frame_times_[i].flags & FrameTimeInfo_Flags_Frame_Dropped)
-                        color = Color_Magenta;
-                    else
-                        color = Color_Green;
-
-                    color.w *= 0.5f;
-
-                    float seg_x[2] = { -i * frame_dt, -(i + 1) * frame_dt };
-                    float seg_y[2] = { gpu_frame_times_[i].frametime, gpu_frame_times_[i + 1].frametime };
-                    constexpr float seg_ybase[2] = { 0.0f, 0.0f };
-
-                    ImPlot::PushStyleColor(ImPlotCol_Fill, ImGui::ColorConvertFloat4ToU32(color));
-                    ImPlot::PlotShaded(("##shaded" + std::to_string(i)).c_str(), seg_x, seg_ybase, seg_y, 2);
-                    ImPlot::PopStyleColor();
+                if (!gpu_plot_colors.empty()) {
+                    ImPlotHelper::PlotShadedRuns("##gpu_shaded", plot_x, gpu_plot_y, gpu_plot_colors);
                 }
 
                 ImPlot::EndPlot();
