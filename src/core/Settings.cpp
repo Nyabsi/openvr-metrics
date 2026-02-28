@@ -4,6 +4,8 @@
 #include <SDL3/SDL.h>
 #include <fstream>
 
+#include <helper/SettingsHelper.h>
+
 Settings::Settings()
 {
     overlay_scale_ = 0.20f;
@@ -14,6 +16,7 @@ Settings::Settings()
     post_processing_enabled_ = false;
 	color_temp_ = 8500.0f;
 	color_brightness_ = 100.0f;
+    color_mask_ = { 0.0f, 0.0f, 0.0f };
 }
 
 auto Settings::Load() -> void
@@ -34,6 +37,7 @@ auto Settings::Load() -> void
 		post_processing_enabled_ = static_cast<bool>(j.value("post_processing_enabled", false));
 		color_temp_ = static_cast<float>(j.value("color_temperature", 8500.0f));
 		color_brightness_ = static_cast<float>(j.value("color_brightness", 100.0f));
+        color_mask_ = SettingsHelper::DecodeColorMask(j.value("color_mask", std::string("0,0,0")));
     }
 
 	file.close();
@@ -54,6 +58,7 @@ auto Settings::Save() -> void
 	j["post_processing_enabled"] = post_processing_enabled_;
 	j["color_temperature"] = color_temp_;
 	j["color_brightness"] = color_brightness_;
+    j["color_mask"] = SettingsHelper::EncodeColorMask(color_mask_);
 
     std::ofstream file(settingsPath);
     file << j.dump(4);
