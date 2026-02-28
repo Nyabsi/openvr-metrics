@@ -8,18 +8,13 @@ OpenVR Metrics is a real-time VR performance monitoring tool designed for both d
 
 ## Download
 
-> [!NOTE]
-> Linux does not support `Installer` type distribution in Github, nor does it have other form of packaging ie. `AppImage` or `Flatpak`. The only way to get automated updates for Linux is on [Steam](https://store.steampowered.com/app/4361360/OpenVR_Metrics/) consider obtaining the application from there to support the application development.
+> [!IMPORTANT]
+> Linux will not have pre-packaged builds on GitHub. Different distributions may ship different versions of system libraries (libc, Vulkan, and so on), making developing a single portable Linux package unstable. The only supported method for receiving automated updates and a functioning Linux build is through [Steam](https://store.steampowered.com/app/4361360/OpenVR_Metrics/), where the program runs inside the **Steam Linux Runtime Soldier**, which standardizes the environment across distributions.
 
 To download the application, select the preferred download for your operating system below:
 
 - [Windows x64 (Installer)](https://github.com/Nyabsi/openvr-metrics/releases/latest/download/openvr-metrics-win32-x64-installer.exe)
 - [Windows x64 (Portable)](https://github.com/Nyabsi/openvr-metrics/releases/latest/download/openvr-metrics-win32-x64-portable.exe)
-- [Linux x86_64 (Portable)](https://github.com/Nyabsi/openvr-metrics/releases/latest/download/openvr-metrics-linux-x86_64-portable.zip)
-- [Linux ARM64 (Portable)](https://github.com/Nyabsi/openvr-metrics/releases/latest/download/openvr-metrics-linux-aarch64-portable.zip)
-
-> [!IMPORTANT]
-> Linux builds are temporarily unavailable, they will be available starting from v1.6.0 upwards.
 
 ## Features
 
@@ -57,8 +52,6 @@ View applications currently consuming system resources within SteamVR.
 
 Modify SteamVR resolution directly from within OpenVR Metrics.
 
-#### Display Features (Supported Devices Only)
-
 #### Display Color Adjustment
 
 * Apply color filters and brightness controls universally across supported devices[^2]
@@ -69,7 +62,7 @@ Modify SteamVR resolution directly from within OpenVR Metrics.
 
 ## Building
 
-> [!IMPORTANT]
+> [!NOTE]
 > You need [Vulkan SDK](https://vulkan.lunarg.com/) to build this project, make sure you have it downloaded before proceeding
 
 First clone the repository as recursive
