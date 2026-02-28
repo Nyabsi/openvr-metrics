@@ -1053,15 +1053,8 @@ auto ControllerOverlay::Update() -> void
                     stable_bottleneck_flags &= ~BottleneckSource_Flags_CPU;
                     cpu_clear_frames = 0;
                 }
+            }
         }
-        else if (detected_flags != BottleneckSource_Flags_None) {
-            if (detected_flags == last_detected_flags) {
-                consecutive_bottleneck_frames++;
-                if (consecutive_bottleneck_frames >= kTriggerThreshold) {
-                    stable_bottleneck_flags = detected_flags;
-                    consecutive_bottleneck_frames = 0;
-                    consecutive_clear_frames = 0;
-                }
 
         bool wireless_stable = (stable_bottleneck_flags & BottleneckSource_Flags_Wireless) != 0;
 
@@ -1075,10 +1068,7 @@ auto ControllerOverlay::Update() -> void
                 {
                     stable_bottleneck_flags |= BottleneckSource_Flags_Wireless;
                     wireless_trigger_frames = 0;
-            }
-            else {
-                last_detected_flags = detected_flags;
-                consecutive_bottleneck_frames = 1;
+                }
             }
         }
         else
