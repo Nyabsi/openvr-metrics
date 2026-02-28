@@ -99,4 +99,4 @@ private:
     PFN_vkCmdEndRenderingKHR f_vkCmdEndRenderingKHR;
 };
 
-extern VulkanRenderer* g_vulkanRenderer;
+extern std::unique_ptr<VulkanRenderer> g_vulkanRenderer;

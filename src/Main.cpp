@@ -41,7 +41,7 @@ extern "C" __declspec(dllexport) unsigned long NvOptimusEnablement = 0x00000001;
 extern "C" __declspec(dllexport) unsigned long AmdPowerXpressRequestHighPerformance = 0x00000001;
 #endif
 
-VulkanRenderer* g_vulkanRenderer = new VulkanRenderer();
+std::unique_ptr<VulkanRenderer> g_vulkanRenderer;
 
 std::unique_ptr<ControllerOverlay> g_processInformation;
 std::unique_ptr<DashboardOverlay>  g_ProcessList;
@@ -76,6 +76,8 @@ int main(
     ShowWindow(GetConsoleWindow(), SW_HIDE);
 #endif
     std::srand(static_cast<unsigned int>(std::time(nullptr)));
+
+    g_vulkanRenderer = std::make_unique<VulkanRenderer>();
 
     try {
         OpenVRInit(vr::VRApplication_Background);
@@ -164,20 +166,21 @@ int main(
         if (g_ProcessList->Render())
             g_ProcessList->Draw();
 
+        const uint64_t now = SDL_GetTicksNS();
         const uint64_t target_time_ns = static_cast<uint64_t>(1'000'000'000.0 / g_hmd_refresh_rate);
-        const uint64_t frame_duration_ns = SDL_GetTicksNS() - g_last_frame_time;
+        const uint64_t frame_duration_ns = now - g_last_frame_time;
 
         if (frame_duration_ns < target_time_ns)
         {
             const uint32_t timeout_ms = static_cast<uint32_t>((target_time_ns - frame_duration_ns) / 1'000'000);
             vr::VROverlay()->WaitFrameSync(timeout_ms);
 
-            const uint64_t remaining_ns = target_time_ns - (SDL_GetTicksNS() - g_last_frame_time);
+            const uint64_t remaining_ns = target_time_ns - (now - g_last_frame_time);
             if (remaining_ns > 0)
                 SDL_DelayPrecise(remaining_ns);
         }
 
-        g_last_frame_time = SDL_GetTicksNS();
+        g_last_frame_time = now;
     }
 
     VkResult vk_result = vkDeviceWaitIdle(g_vulkanRenderer->Device());
