@@ -880,6 +880,7 @@ auto ControllerOverlay::Update() -> void
             timings.m_flPresentCallCpuMs +
             timings.m_flWaitForPresentCpuMs +
             timings.m_flClientFrameIntervalMs +
+			timings.m_flCompositorIdleCpuMs +
             timings.m_flSubmitFrameMs;
 
         gpu_frame_time_ms_ =
