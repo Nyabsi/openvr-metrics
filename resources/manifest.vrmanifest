@@ -5,6 +5,7 @@
             "app_key": "steam.overlay.4361360",
             "launch_type": "binary",
             "binary_path_windows": "metrics_overlay.exe",
+            "binary_path_linux": "metrics_overlay",
             "is_dashboard_overlay": true,
             "strings": {
                 "en_us": {
