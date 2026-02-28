@@ -1,12 +1,12 @@
 #pragma once
 
-#include <format>
-#include <span>
 #include <string>
 #include <stdexcept>
 
 #include <openvr.h>
 #include <SDL3/SDL.h>
+
+#include <helper/FormatHelper.h>
 
 inline auto OpenVRInit(vr::EVRApplicationType type) -> void
 {
@@ -16,10 +16,10 @@ inline auto OpenVRInit(vr::EVRApplicationType type) -> void
     // if VRApplication_Background is specified when trying to launch
     // and SteamVR is not running, it will throw VRInitError_Init_NoServerForBackgroundApp (121)
     if (result == vr::VRInitError_Init_NoServerForBackgroundApp)
-        throw std::runtime_error(std::format("This application requires SteamVR to be running to start!"));
+        throw std::runtime_error(format_helper::Format("This application requires SteamVR to be running to start!"));
 
     if (result == vr::VRInitError_Init_HmdNotFound)
-        throw std::runtime_error(std::format("SteamVR was running but headset was not found."));
+        throw std::runtime_error(format_helper::Format("SteamVR was running but headset was not found."));
 }
 
 inline auto OpenVRManifestInstalled(const char* appKey) -> bool
@@ -33,31 +33,31 @@ inline auto GetCurrentGamePid() -> uint32_t {
 
 inline auto TrackerPropStringToString(const std::string& name_unformatted)
 {
-    if (name_unformatted.contains("vive_tracker_left_foot"))
+    if (name_unformatted.find("vive_tracker_left_foot") != std::string::npos)
         return "Left Foot";
-    else if (name_unformatted.contains("vive_tracker_right_foot"))
+    else if (name_unformatted.find("vive_tracker_right_foot") != std::string::npos)
         return "Right Foot";
-    else if (name_unformatted.contains("vive_tracker_left_shoulder"))
+    else if (name_unformatted.find("vive_tracker_left_shoulder") != std::string::npos)
         return "Left Shoulder";
-    else if (name_unformatted.contains("vive_tracker_right_shoulder"))
+    else if (name_unformatted.find("vive_tracker_right_shoulder") != std::string::npos)
         return "Right Shoulder";
-    else if (name_unformatted.contains("vive_tracker_left_elbow"))
+    else if (name_unformatted.find("vive_tracker_left_elbow") != std::string::npos)
         return "Left Elbow";
-    else if (name_unformatted.contains("vive_tracker_right_elbow"))
+    else if (name_unformatted.find("vive_tracker_right_elbow") != std::string::npos)
         return "Right Elbow";
-    else if (name_unformatted.contains("vive_tracker_left_knee"))
+    else if (name_unformatted.find("vive_tracker_left_knee") != std::string::npos)
         return "Left Knee";
-    else if (name_unformatted.contains("vive_tracker_right_knee"))
+    else if (name_unformatted.find("vive_tracker_right_knee") != std::string::npos)
         return "Right Knee";
-    else if (name_unformatted.contains("vive_tracker_waist"))
+    else if (name_unformatted.find("vive_tracker_waist") != std::string::npos)
         return "Waist";
-    else if (name_unformatted.contains("vive_tracker_chest"))
+    else if (name_unformatted.find("vive_tracker_chest") != std::string::npos)
         return "Chest";
-    else if (name_unformatted.contains("vive_tracker_camera"))
+    else if (name_unformatted.find("vive_tracker_camera") != std::string::npos)
         return "Camera";
-    else if (name_unformatted.contains("vive_tracker_keyboard"))
+    else if (name_unformatted.find("vive_tracker_keyboard") != std::string::npos)
         return "Keyboard";
-    else if (name_unformatted.contains("vive_tracker_handed"))
+    else if (name_unformatted.find("vive_tracker_handed") != std::string::npos)
         return "Handed Tracker";
     return "Generic Tracker";
 }
@@ -70,7 +70,7 @@ inline auto OpenVRManifestInstall() -> void
 
     vr::EVRApplicationError result = vr::VRApplications()->AddApplicationManifest(manifestPath.data());
     if (result > vr::VRApplicationError_None)
-        throw std::runtime_error(std::format("Failed to add manifest from \"{}\" ({})", manifestPath, static_cast<int>(result)));
+        throw std::runtime_error(format_helper::Format("Failed to add manifest from \"{}\" ({})", manifestPath, static_cast<int>(result)));
 }
 
 class VrTrackedDeviceProperties {
@@ -91,7 +91,7 @@ class VrTrackedDeviceProperties {
         std::vector<char> buffer(vr::k_unMaxPropertyStringSize);
         auto buffer_len = vr::VRSystem()->GetStringTrackedDeviceProperty(handle, property, buffer.data(), vr::k_unMaxPropertyStringSize, &result);
         if (result != vr::TrackedProp_Success || buffer_len == 0) {
-            throw std::runtime_error(std::format(
+            throw std::runtime_error(format_helper::Format(
                 "Failed to get string prop \"{}\" for {} (err={})",
                 static_cast<int>(property),
                 static_cast<int>(handle),
@@ -107,7 +107,7 @@ class VrTrackedDeviceProperties {
         auto value = vr::VRSystem()->GetBoolTrackedDeviceProperty(handle, property, &result);
         if (result > vr::TrackedProp_Success)
             throw std::runtime_error(
-                std::format(
+                format_helper::Format(
                     "Failed to get bool prop \"{}\" for {} ({})",
                     static_cast<int>(property),
                     static_cast<int>(handle),
@@ -121,7 +121,7 @@ class VrTrackedDeviceProperties {
         auto value = vr::VRSystem()->GetFloatTrackedDeviceProperty(handle, property, &result);
         if (result > vr::TrackedProp_Success)
             throw std::runtime_error(
-                std::format(
+                format_helper::Format(
                     "Failed to get float prop \"{}\" for {} ({})",
                     static_cast<int>(property),
                     static_cast<int>(handle),
@@ -135,7 +135,7 @@ class VrTrackedDeviceProperties {
         auto value = vr::VRSystem()->GetInt32TrackedDeviceProperty(handle, property, &result);
         if (result > vr::TrackedProp_Success)
             throw std::runtime_error(
-                std::format(
+                format_helper::Format(
                     "Failed to get int32 prop \"{}\" for {} ({})",
                     static_cast<int>(property),
                     static_cast<int>(handle),

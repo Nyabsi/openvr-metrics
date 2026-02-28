@@ -95,10 +95,6 @@ private:
     Overlay_DisplayMode display_mode_;
     OverlayTransform transform_;
 
-    bool window_shown_;
-    bool window_minimized_;
-    bool keyboard_active_;
-
     float overlay_scale_;
     int handedness_;
     int position_;

@@ -585,11 +585,15 @@ auto ControllerOverlay::Render() -> bool
                         {
                             const auto& cat = categories[i];
 
-                            auto has_alerts = performance_alerts_ | std::views::filter([f = cat.flag](const PerformanceAlert& a) {
-                                return (a.flags & f) != 0;
-                            });
+                            bool has_alerts = false;
+                            for (const auto& alert : performance_alerts_) {
+                                if ((alert.flags & cat.flag) != 0) {
+                                    has_alerts = true;
+                                    break;
+                                }
+                            }
 
-                            if (std::ranges::empty(has_alerts)) 
+                            if (!has_alerts)
                                 continue;
 
                             ImVec4 col = GetAlertHeaderColor(cat.flag);
@@ -615,13 +619,13 @@ auto ControllerOverlay::Render() -> bool
 
                         if (ImGui::BeginChild("##FullSizeAlertContent", ImVec2(0, 0), true, ImGuiWindowFlags_AlwaysVerticalScrollbar))
                         {
-                            auto filtered = performance_alerts_ | std::views::filter([f = cat.flag](const PerformanceAlert& a) {
-                                return (a.flags & f) != 0;
-                            });
-
                             int shown = 0;
-                            for (const auto& alert : filtered)
+                            for (const auto& alert : performance_alerts_)
                             {
+                                if ((alert.flags & cat.flag) == 0) {
+                                    continue;
+                                }
+
                                 shown++;
 
                                 std::string count_str = (alert.count > 1) ? " (x" + std::to_string(alert.count) + ")" : "";
@@ -783,10 +787,10 @@ auto ControllerOverlay::UpdateDisplaySettings(bool init) -> void
     color_brightness_ = std::clamp(color_brightness_, 10.0f, 300.0f);
 
     const bool post_processing_changed =
-        (prev_color_temperature_ != color_temperature_) ||
+        ((prev_color_temperature_ != color_temperature_) ||
         (prev_color_temp_ != color_temp_) ||
         (prev_color_brightness_ != color_brightness_) ||
-        (prev_colour_mask_ != colour_mask_) &&
+        (prev_colour_mask_ != colour_mask_)) &&
         !init;
 
     if (!post_processing_changed) {
@@ -1166,12 +1170,12 @@ auto ControllerOverlay::Update() -> void
             }
 
             if (!merged) {
-                performance_alerts_.push_back(PerformanceAlert{
-                    .timestamp = now_ms,
-                    .flags = alert_flags,
-                    .message = std::move(message),
-                    .count = 1
-                });
+                PerformanceAlert alert{};
+                alert.timestamp = now_ms;
+                alert.flags = alert_flags;
+                alert.message = std::move(message);
+                alert.count = 1;
+                performance_alerts_.push_back(std::move(alert));
             }
         }
     }
@@ -1327,12 +1331,10 @@ auto ControllerOverlay::AddMonitoredDeviceById(uint32_t device_id) -> void
                 name = TrackerPropStringToString(controller_type);
             }
 
-            TrackedDevice device =
-            {
-                .device_id = device_id,
-                .device_label = name,
-                .battery_percentage = c_properties.GetFloat(vr::Prop_DeviceBatteryPercentage_Float)
-            };
+            TrackedDevice device{};
+            device.device_id = device_id;
+            device.device_label = name;
+            device.battery_percentage = c_properties.GetFloat(vr::Prop_DeviceBatteryPercentage_Float);
 
             tracked_devices_.push_back(device);
         }

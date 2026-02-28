@@ -163,53 +163,46 @@ Overlay::Overlay(const std::string& appKey, const std::string& name, vr::VROverl
         }
     }
 
-    ImGui_ImplOpenVR_InitInfo openvr_init_info =
-    {
-        .handle = this->Handle(),
-        .width = width,
-        .height = height
-    };
+    ImGui_ImplOpenVR_InitInfo openvr_init_info{};
+    openvr_init_info.handle = this->Handle();
+    openvr_init_info.width = width;
+    openvr_init_info.height = height;
 
     ImGui_ImplOpenVR_Init(&openvr_init_info);
 
-    VkSurfaceFormatKHR surface_format =
-    {
-        .format = VK_FORMAT_R8G8B8A8_SRGB,
-        .colorSpace = VK_COLOR_SPACE_EXTENDED_SRGB_LINEAR_EXT
-    };
+    VkSurfaceFormatKHR surface_format{};
+    surface_format.format = VK_FORMAT_R8G8B8A8_SRGB;
+    surface_format.colorSpace = VK_COLOR_SPACE_EXTENDED_SRGB_LINEAR_EXT;
 
-    VkPipelineRenderingCreateInfoKHR pipeline_rendering_create_info =
-    {
-        .sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR,
-        .pNext = nullptr,
-        .viewMask = 0,
-        .colorAttachmentCount = 1,
-        .pColorAttachmentFormats = &surface_format.format,
-        .depthAttachmentFormat = VK_FORMAT_UNDEFINED,
-        .stencilAttachmentFormat = VK_FORMAT_UNDEFINED
-    };
+    VkPipelineRenderingCreateInfoKHR pipeline_rendering_create_info{};
+    pipeline_rendering_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR;
+    pipeline_rendering_create_info.pNext = nullptr;
+    pipeline_rendering_create_info.viewMask = 0;
+    pipeline_rendering_create_info.colorAttachmentCount = 1;
+    pipeline_rendering_create_info.pColorAttachmentFormats = &surface_format.format;
+    pipeline_rendering_create_info.depthAttachmentFormat = VK_FORMAT_UNDEFINED;
+    pipeline_rendering_create_info.stencilAttachmentFormat = VK_FORMAT_UNDEFINED;
 
-    ImGui_ImplVulkan_InitInfo init_info = {
-        .ApiVersion = VK_API_VERSION_1_3,
-        .Instance = g_vulkanRenderer->Instance(),
-        .PhysicalDevice = g_vulkanRenderer->PhysicalDevice(),
-        .Device = g_vulkanRenderer->Device(),
-        .QueueFamily = g_vulkanRenderer->QueueFamily(),
-        .Queue = g_vulkanRenderer->Queue(),
-        .DescriptorPool = g_vulkanRenderer->DescriptorPool(),
-        .RenderPass = VK_NULL_HANDLE,
-        .MinImageCount = 16,
-        .ImageCount = 16,
-        .MSAASamples = VK_SAMPLE_COUNT_1_BIT,
-        .PipelineCache = g_vulkanRenderer->PipelineCache(),
-        .Subpass = 0,
-        .DescriptorPoolSize = 0,
-        .UseDynamicRendering = true,
-        .PipelineRenderingCreateInfo = pipeline_rendering_create_info,
-        .Allocator = g_vulkanRenderer->Allocator(),
-        .CheckVkResultFn = nullptr,
-        .MinAllocationSize = 1024*1024,
-    };
+    ImGui_ImplVulkan_InitInfo init_info{};
+    init_info.ApiVersion = VK_API_VERSION_1_3;
+    init_info.Instance = g_vulkanRenderer->Instance();
+    init_info.PhysicalDevice = g_vulkanRenderer->PhysicalDevice();
+    init_info.Device = g_vulkanRenderer->Device();
+    init_info.QueueFamily = g_vulkanRenderer->QueueFamily();
+    init_info.Queue = g_vulkanRenderer->Queue();
+    init_info.DescriptorPool = g_vulkanRenderer->DescriptorPool();
+    init_info.RenderPass = VK_NULL_HANDLE;
+    init_info.MinImageCount = 16;
+    init_info.ImageCount = 16;
+    init_info.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
+    init_info.PipelineCache = g_vulkanRenderer->PipelineCache();
+    init_info.Subpass = 0;
+    init_info.DescriptorPoolSize = 0;
+    init_info.UseDynamicRendering = true;
+    init_info.PipelineRenderingCreateInfo = pipeline_rendering_create_info;
+    init_info.Allocator = g_vulkanRenderer->Allocator();
+    init_info.CheckVkResultFn = nullptr;
+    init_info.MinAllocationSize = 1024 * 1024;
 
     ImGui_ImplVulkan_Init(&init_info);
 

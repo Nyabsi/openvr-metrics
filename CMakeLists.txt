@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.26)
+cmake_minimum_required(VERSION 3.25)
 
 if (POLICY CMP0141)
   cmake_policy(SET CMP0141 NEW)
@@ -9,7 +9,7 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/")
 
 project(openvr_metrics)
 
-set(CMAKE_CXX_STANDARD 23)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
@@ -69,7 +69,7 @@ if (WIN32)
     target_sources(metrics_overlay PRIVATE "resources/winicon.rc")
 endif()
 
-target_compile_features(metrics_overlay PUBLIC cxx_std_23)
+target_compile_features(metrics_overlay PUBLIC cxx_std_17)
 
 target_link_libraries(metrics_overlay
     PRIVATE
@@ -103,7 +103,8 @@ add_dependencies(metrics_overlay metrics_overlay_resources)
 add_custom_command(
     TARGET metrics_overlay POST_BUILD
     COMMENT "Copying Executable and DLLs"
-    COMMAND ${CMAKE_COMMAND} -E copy -t ${CUSTOM_OUTPUT_DIR} $<TARGET_FILE:metrics_overlay>
-    COMMAND ${CMAKE_COMMAND} -E copy -t ${CUSTOM_OUTPUT_DIR} $<TARGET_FILE:OpenVR::API>
+    COMMAND ${CMAKE_COMMAND} -E make_directory ${CUSTOM_OUTPUT_DIR}
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:metrics_overlay> ${CUSTOM_OUTPUT_DIR}
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:OpenVR::API> ${CUSTOM_OUTPUT_DIR}
     COMMAND_EXPAND_LISTS
 )

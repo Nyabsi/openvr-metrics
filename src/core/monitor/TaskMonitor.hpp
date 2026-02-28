@@ -9,7 +9,7 @@
 #include <string>
 #include <unordered_map>
 #include <stdint.h>
-#include <ranges>
+#include <algorithm>
 #include <filesystem>
 #include <chrono>
 
@@ -66,9 +66,9 @@ enum CpuMetric_Type : uint8_t {
 #ifndef __linux
 inline auto getCurrentlyUsedGpu = [](const ProcessInfo& info) -> GpuInfo 
 {
-    auto gpuIt = std::ranges::find_if(info.gpus, [](auto& gpuEntry) {
+    auto gpuIt = std::find_if(info.gpus.begin(), info.gpus.end(), [](const auto& gpuEntry) {
         auto& [gpuId, gpu] = gpuEntry;
-        return std::ranges::find_if(gpu.engines, [](auto& engEntry) {
+        return std::find_if(gpu.engines.begin(), gpu.engines.end(), [](const auto& engEntry) {
             const auto& [idx, eng] = engEntry;
             return eng.engine_type == "3D" && eng.utilization_percentage > 0.0f;
         }) != gpu.engines.end();
@@ -82,13 +82,13 @@ inline auto getCurrentlyUsedGpu = [](const ProcessInfo& info) -> GpuInfo
 
 inline auto gpuPercentage = [](const GpuInfo& gpu) -> float
 {
-    if (auto it = std::ranges::find_if(gpu.engines,
+    auto it = std::find_if(gpu.engines.begin(), gpu.engines.end(),
         [](const auto& pair) {
             const auto& [key, eng] = pair;
             return eng.engine_type == "3D" &&
                 eng.utilization_percentage > 0.0f;
         });
-        it != gpu.engines.end())
+    if (it != gpu.engines.end())
     {
         return it->second.utilization_percentage;
     }
@@ -97,12 +97,12 @@ inline auto gpuPercentage = [](const GpuInfo& gpu) -> float
 
 inline auto gpuVideoPercentage = [](const GpuInfo& gpu) -> float
 {
-    if (auto it = std::ranges::find_if(gpu.engines,
+    auto it = std::find_if(gpu.engines.begin(), gpu.engines.end(),
         [](const auto& pair) {
             const auto& [key, eng] = pair;
             return eng.engine_type.find("Encode") != std::string::npos || eng.engine_type.find("Codec") != std::string::npos && eng.utilization_percentage > 0.0f;
         });
-        it != gpu.engines.end())
+    if (it != gpu.engines.end())
     {
         return it->second.utilization_percentage;
     }

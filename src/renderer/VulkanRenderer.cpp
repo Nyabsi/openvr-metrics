@@ -82,13 +82,11 @@ auto VulkanRenderer::Initialize()  -> void
     };
 
     auto f_vkCreateDebugReportCallbackEXT = (PFN_vkCreateDebugReportCallbackEXT)vkGetInstanceProcAddr(vulkan_instance_, "vkCreateDebugReportCallbackEXT");
-    VkDebugReportCallbackCreateInfoEXT debug_report_create_info =
-    {
-        .sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT,
-        .flags = VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT | VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT,
-        .pfnCallback = DebugReport,
-        .pUserData = nullptr
-    };
+    VkDebugReportCallbackCreateInfoEXT debug_report_create_info{};
+    debug_report_create_info.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT;
+    debug_report_create_info.flags = VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT | VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT;
+    debug_report_create_info.pfnCallback = DebugReport;
+    debug_report_create_info.pUserData = nullptr;
 
     vk_result = f_vkCreateDebugReportCallbackEXT(vulkan_instance_, &debug_report_create_info, vulkan_allocator_, &debug_report_);
     VK_VALIDATE_RESULT(vk_result);
@@ -146,8 +144,9 @@ auto VulkanRenderer::Initialize()  -> void
 
     vkGetPhysicalDeviceQueueFamilyProperties(vulkan_physical_device_, &family_prop_count, queues_properties.data());
 
-    for (auto [idx, property] : std::views::enumerate(queues_properties))
+    for (size_t idx = 0; idx < queues_properties.size(); ++idx)
     {
+        const auto& property = queues_properties[idx];
         if (property.queueFlags & VK_QUEUE_GRAPHICS_BIT) {
             vulkan_queue_family_ = static_cast<uint32_t>(idx);
             break;
@@ -511,26 +510,22 @@ auto VulkanRenderer::RenderSurface(ImDrawData* draw_data, Overlay* overlay) cons
     vk_result = vkQueueSubmit(overlay->Surface()->queue, 1, &submit_info_barrier, overlay->Surface()->fences[idx]);
     VK_VALIDATE_RESULT(vk_result);
 
-    vr::VRVulkanTextureData_t vulkanTexure =
-    {
-        .m_nImage = (uintptr_t)overlay->Surface()->textures[idx],
-        .m_pDevice = vulkan_device_,
-        .m_pPhysicalDevice = vulkan_physical_device_,
-        .m_pInstance = vulkan_instance_,
-        .m_pQueue = vulkan_queue_,
-        .m_nQueueFamilyIndex = (uint32_t)vulkan_queue_family_,
-        .m_nWidth = overlay->Surface()->width,
-        .m_nHeight = overlay->Surface()->height,
-        .m_nFormat = (uint32_t)overlay->Surface()->texture_format.format,
-        .m_nSampleCount = VK_SAMPLE_COUNT_1_BIT,
-    };
+    vr::VRVulkanTextureData_t vulkanTexure{};
+    vulkanTexure.m_nImage = (uintptr_t)overlay->Surface()->textures[idx];
+    vulkanTexure.m_pDevice = vulkan_device_;
+    vulkanTexure.m_pPhysicalDevice = vulkan_physical_device_;
+    vulkanTexure.m_pInstance = vulkan_instance_;
+    vulkanTexure.m_pQueue = vulkan_queue_;
+    vulkanTexure.m_nQueueFamilyIndex = (uint32_t)vulkan_queue_family_;
+    vulkanTexure.m_nWidth = overlay->Surface()->width;
+    vulkanTexure.m_nHeight = overlay->Surface()->height;
+    vulkanTexure.m_nFormat = (uint32_t)overlay->Surface()->texture_format.format;
+    vulkanTexure.m_nSampleCount = VK_SAMPLE_COUNT_1_BIT;
 
-    vr::Texture_t vrTexture =
-    {
-        .handle = (void*)&vulkanTexure,
-        .eType = vr::TextureType_Vulkan,
-        .eColorSpace = vr::ColorSpace_Auto,
-    };
+    vr::Texture_t vrTexture{};
+    vrTexture.handle = (void*)&vulkanTexure;
+    vrTexture.eType = vr::TextureType_Vulkan;
+    vrTexture.eColorSpace = vr::ColorSpace_Auto;
 
     try {
         overlay->SetTexture(vrTexture);
