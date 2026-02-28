@@ -177,7 +177,7 @@ auto ControllerOverlay::Render() -> bool
 
             const int frame_count = static_cast<int>(refresh_rate_);
             const float frame_dt = refresh_rate_ > 0.0f ? (1.0f / refresh_rate_) : 0.0f;
-            const double history = frame_count * frame_dt;
+            const double x_min = -static_cast<double>((frame_count > 1 ? (frame_count - 1) : 0) * frame_dt);
 
             static std::vector<float> plot_x;
             static std::vector<float> cpu_plot_y;
@@ -211,8 +211,7 @@ auto ControllerOverlay::Render() -> bool
                     ImPlotAxisFlags_AutoFit | ImPlotAxisFlags_NoTickMarks | ImPlotAxisFlags_NoTickLabels | ImPlotAxisFlags_NoMenus | ImPlotAxisFlags_NoHighlight | ImPlotAxisFlags_NoSideSwitch | ImPlotAxisFlags_Lock
                 );
 
-                // HACK: frame_dt * 2.0f ensures history buffer is enough to fill the entire plot
-                ImPlot::SetupAxisLimits(ImAxis_X1, -(history - (frame_dt * 2.0f)), 0.0, ImGuiCond_Always);
+                ImPlot::SetupAxisLimits(ImAxis_X1, x_min, 0.0, ImGuiCond_Always);
                 ImPlot::SetupAxisLimits(ImAxis_Y1, 0.0, frame_time_ * 2.0, ImGuiCond_Always);
 
                 static double y_ticks[1] = { frame_time_ };
@@ -244,7 +243,7 @@ auto ControllerOverlay::Render() -> bool
 
             const int frame_count = static_cast<int>(refresh_rate_);
             const float frame_dt = refresh_rate_ > 0.0f ? (1.0f / refresh_rate_) : 0.0f;
-            const double history = frame_count * frame_dt;
+            const double x_min = -static_cast<double>((frame_count > 1 ? (frame_count - 1) : 0) * frame_dt);
 
             static std::vector<float> plot_x;
             static std::vector<float> gpu_plot_y;
@@ -277,7 +276,7 @@ auto ControllerOverlay::Render() -> bool
                     ImPlotAxisFlags_AutoFit | ImPlotAxisFlags_NoLabel | ImPlotAxisFlags_NoTickMarks | ImPlotAxisFlags_NoTickLabels | ImPlotAxisFlags_NoMenus | ImPlotAxisFlags_NoHighlight | ImPlotAxisFlags_NoSideSwitch | ImPlotAxisFlags_Lock
                 );
 
-                ImPlot::SetupAxisLimits(ImAxis_X1, -(history - (frame_dt * 2.0f)), 0.0, ImGuiCond_Always);
+                ImPlot::SetupAxisLimits(ImAxis_X1, x_min, 0.0, ImGuiCond_Always);
                 ImPlot::SetupAxisLimits(ImAxis_Y1, 0.0, frame_time_ * 2.0, ImGuiCond_Always);
 
                 static double y_ticks[1] = { frame_time_ };
