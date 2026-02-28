@@ -61,10 +61,9 @@ ControllerOverlay::ControllerOverlay() : Overlay(OVERLAY_KEY, OVERLAY_NAME, vr::
     color_temp_ = {};
     color_brightness_ = {};
     colour_mask_ = {};
-#ifndef __linux
     gpu_info_ = {};
     process_info_ = {};
-#endif
+
     try {
         this->SetInputMethod(vr::VROverlayInputMethod_Mouse);
         this->EnableFlag(vr::VROverlayFlags_SendVRDiscreteScrollEvents);
@@ -389,7 +388,7 @@ auto ControllerOverlay::Render() -> bool
                 ImGui::Text(
                     "%.0f MB (%.1f%%)",
                     process_info_.memory_usage / (1024.0f * 1024.0f),
-                    gpu_info_.memory.dedicated_available > 0
+                    process_info_.memory_available > 0
                     ? (process_info_.memory_usage * 100.0f) / process_info_.memory_available
                     : 0.0f
                 );
