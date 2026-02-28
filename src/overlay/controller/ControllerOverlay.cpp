@@ -798,64 +798,40 @@ auto ControllerOverlay::UpdateDisplaySettings(bool init) -> void
 
         if (temperature <= 66.0f) {
             color_channel_red_ = 1.0f;
-        }
-        else {
-            color_channel_red_ = (std::clamp<float>(329.698727446f * static_cast<float>(std::pow((temperature - 60.0f), -0.1332047592f)), 0, 255) / 255.0f);
+        } else {
+            color_channel_red_ = std::clamp<float>(329.698727446f * static_cast<float>(std::pow((temperature - 60.0f), -0.1332047592f)), 0.0f, 255.0f) / 255.0f;
         }
 
         if (temperature <= 66.0f) {
-            color_channel_green_ = (std::clamp<float>(99.4708025861f * ::logf(temperature) - 161.1195681661f, 0, 255) / 255.0f);
-        }
-        else {
-            color_channel_green_ = (std::clamp<float>(288.1221695283f * static_cast<float>(std::pow((temperature - 60.0f), -0.0755148492f)), 0, 255) / 255.0f);
+            color_channel_green_ = std::clamp<float>(99.4708025861f * ::logf(temperature) - 161.1195681661f, 0.0f, 255.0f) / 255.0f;
+        } else {
+            color_channel_green_ = std::clamp<float>(288.1221695283f * static_cast<float>(std::pow((temperature - 60.0f), -0.0755148492f)), 0.0f, 255.0f) / 255.0f;
         }
 
         if (temperature >= 66.0f) {
             color_channel_blue_ = 1.0f;
-        }
-        else {
-            if (temperature <= 19.0f) {
-                color_channel_blue_ = 0.01f;
-            }
-            else {
-                color_channel_blue_ = (std::clamp<float>(138.5177312231f * ::logf(temperature - 10.0f) - 305.0447927307f, 0, 255) / 255.0f);
-            }
+        } else if (temperature <= 19.0f) {
+            color_channel_blue_ = 0.01f;
+        } else {
+            color_channel_blue_ = std::clamp<float>(138.5177312231f * ::logf(temperature - 10.0f) - 305.0447927307f, 0.0f, 255.0f) / 255.0f;
         }
 
-        auto gammaCorrect = [](float channel) -> float {
-            return std::abs(channel <= 0.04045f ? channel / 12.92f : pow((channel + 0.055f) / 1.055f, 2.4f));
-        };
-
-        float red = gammaCorrect(color_channel_red_);
-        float green = gammaCorrect(color_channel_green_);
-        float blue = gammaCorrect(color_channel_blue_);
+        float red   = color_channel_red_;
+        float green = color_channel_green_;
+        float blue  = color_channel_blue_;
 
         if (colour_mask_[0] > 0.0f || colour_mask_[1] > 0.0f || colour_mask_[2] > 0.0f) {
-            float original_luminance = 0.2126f * red + 0.7152f * green + 0.0722f * blue;
-
-            red *= colour_mask_[0];
+            red   *= colour_mask_[0];
             green *= colour_mask_[1];
-            blue *= colour_mask_[2];
-
-            float tinted_luminance = 0.2126f * red + 0.7152f * green + 0.0722f * blue;
-            if (tinted_luminance > 0.0f) {
-                float brightness_correction = original_luminance / tinted_luminance;
-                red *= brightness_correction;
-                green *= brightness_correction;
-                blue *= brightness_correction;
-            }
+            blue  *= colour_mask_[2];
         }
 
-        float brightness_factor = (color_brightness_ / 100.0f);
+        const float brightness_factor = color_brightness_ / 100.0f;
+        constexpr float k_max_gain = 2.0f;
 
-        auto toneMap = [](float color, float factor) -> float {
-            float boosted = color * factor;
-            return boosted / (1.0f + (boosted - 1.0f) * 0.5f);
-        };
-
-        color_channel_red_ = toneMap(red, brightness_factor);
-        color_channel_green_ = toneMap(green, brightness_factor);
-        color_channel_blue_ = toneMap(blue, brightness_factor);
+        color_channel_red_   = std::min(red   * brightness_factor, k_max_gain);
+        color_channel_green_ = std::min(green * brightness_factor, k_max_gain);
+        color_channel_blue_  = std::min(blue  * brightness_factor, k_max_gain);
 
         vr::VRSettings()->SetFloat(vr::k_pch_SteamVR_Section, vr::k_pch_SteamVR_HmdDisplayColorGainR_Float, color_channel_red_);
         vr::VRSettings()->SetFloat(vr::k_pch_SteamVR_Section, vr::k_pch_SteamVR_HmdDisplayColorGainG_Float, color_channel_green_);
@@ -866,15 +842,15 @@ auto ControllerOverlay::UpdateDisplaySettings(bool init) -> void
         vr::VRSettings()->SetFloat(vr::k_pch_SteamVR_Section, vr::k_pch_SteamVR_HmdDisplayColorGainG_Float, 1.0f);
         vr::VRSettings()->SetFloat(vr::k_pch_SteamVR_Section, vr::k_pch_SteamVR_HmdDisplayColorGainB_Float, 1.0f);
 
-        color_channel_red_ = 1.0f;
+        color_channel_red_   = 1.0f;
         color_channel_green_ = 1.0f;
-        color_channel_blue_ = 1.0f;
+        color_channel_blue_  = 1.0f;
     }
 
     prev_color_temperature_ = color_temperature_;
-    prev_color_temp_ = color_temp_;
-    prev_color_brightness_ = color_brightness_;
-    prev_colour_mask_ = colour_mask_;
+    prev_color_temp_        = color_temp_;
+    prev_color_brightness_  = color_brightness_;
+    prev_colour_mask_       = colour_mask_;
 }
 
 auto ControllerOverlay::UpdateResolutionScaleSettings() -> void
