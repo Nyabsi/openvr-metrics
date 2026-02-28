@@ -943,14 +943,14 @@ auto ControllerOverlay::Update() -> void
                     info_gpu.flags |= FrameTimeInfo_Flags_OneThirdFramePresented;
                 }
                 else {
-                    if (timings.m_nReprojectionFlags & vr::VRCompositor_ReprojectionAsync) {
-                        if (timings.m_nReprojectionFlags & vr::VRCompositor_ReprojectionMotion) {
-                            info_gpu.flags |= FrameTimeInfo_Flags_MotionSmoothingEnabled;
-                        }
-                        else {
-
-                            info_gpu.flags |= FrameTimeInfo_Flags_Reprojecting;
-                        }
+                    // previously I also checked for vr::VRCompositor_ReprojectionAsync
+                    // but this behaviour is semi-guaranteed, and vr::VRCompositor_ReprojectionAsync
+                    // does not work on Linux, so I removed that check
+                    if (timings.m_nReprojectionFlags & vr::VRCompositor_ReprojectionMotion) {
+                        info_gpu.flags |= FrameTimeInfo_Flags_MotionSmoothingEnabled;
+                    }
+                    else {
+                        info_gpu.flags |= FrameTimeInfo_Flags_Reprojecting;
                     }
                 }
             }
@@ -987,15 +987,16 @@ auto ControllerOverlay::Update() -> void
         bool cpu_detected = false;
         bool wireless_detected = false;
 
+        // TODO: 15.0f is arbitrary Wireless heurestic, this probably should be looked onto.
         if (wireless_latency_ >= 15.0f)
             wireless_detected = true;
 
         if (gpu_frame_times_[frame_index_].flags != 0 &&
-            static_cast<int>(gpu_frame_time_ms_) != static_cast<int>(frame_time_))
+            static_cast<int>(gpu_frame_time_ms_) > static_cast<int>(frame_time_))
             gpu_detected = true;
 
         if (cpu_frame_times_[frame_index_].flags != 0 &&
-            static_cast<int>(cpu_frame_time_ms_) != static_cast<int>(frame_time_))
+            static_cast<int>(cpu_frame_time_ms_) > static_cast<int>(frame_time_))
             cpu_detected = true;
 
         bool gpu_stable = (stable_bottleneck_flags & BottleneckSource_Flags_GPU) != 0;
