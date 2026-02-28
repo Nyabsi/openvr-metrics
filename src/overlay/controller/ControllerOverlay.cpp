@@ -112,6 +112,7 @@ ControllerOverlay::ControllerOverlay() : Overlay(OVERLAY_KEY, OVERLAY_NAME, vr::
     prev_ss_scale_ = ss_scale_;
 
     this->UpdateDeviceTransform();
+    this->UpdateDisplaySettings(true);
 }
 
 auto ControllerOverlay::Render() -> bool
@@ -776,7 +777,7 @@ auto ControllerOverlay::Render() -> bool
     return true;
 }
 
-auto ControllerOverlay::UpdateDisplaySettings() -> void
+auto ControllerOverlay::UpdateDisplaySettings(bool init) -> void
 {
     color_temp_ = std::clamp(color_temp_, 1000.0f, 40000.0f);
     color_brightness_ = std::clamp(color_brightness_, 10.0f, 300.0f);
@@ -785,7 +786,8 @@ auto ControllerOverlay::UpdateDisplaySettings() -> void
         (prev_color_temperature_ != color_temperature_) ||
         (prev_color_temp_ != color_temp_) ||
         (prev_color_brightness_ != color_brightness_) ||
-        (prev_colour_mask_ != colour_mask_);
+        (prev_colour_mask_ != colour_mask_) &&
+        !init;
 
     if (!post_processing_changed) {
         return;
