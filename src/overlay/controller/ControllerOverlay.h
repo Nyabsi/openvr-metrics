@@ -83,7 +83,7 @@ public:
 private:
     auto UpdateDeviceTransform() -> void;
     auto UpdateResolutionScaleSettings() -> void;
-    auto UpdateDisplaySettings() -> void;
+    auto UpdateDisplaySettings(bool init = false) -> void;
 
     TaskMonitor task_monitor_;
     Settings settings_;
