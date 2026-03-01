@@ -116,9 +116,12 @@ int main(
     UpdateApplicationRefreshRate();
 
     for (uint32_t i = 0; i < vr::k_unMaxTrackedDeviceCount; i++) {
-        if (i == vr::k_unTrackedDeviceIndex_Hmd)
-            continue;
-        g_processInformation->AddMonitoredDeviceById(i);
+        try {
+            auto properties = VrTrackedDeviceProperties::FromDeviceIndex(i);
+            properties.CheckConnection();
+            g_processInformation->AddMonitoredDeviceById(i);
+        }
+        catch (...) {}
     }
 
     vr::VREvent_t vr_event = {};
