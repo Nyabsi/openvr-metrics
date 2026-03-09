@@ -56,16 +56,26 @@ find_package_handle_standard_args(OpenVR
 if (OpenVR_FOUND)
     set(OpenVR_INCLUDE_DIRS "${OpenVR_INCLUDE_DIR}")
     set(OpenVR_LIBRARIES "${OpenVR_LIBRARY}")
+    get_filename_component(OpenVR_LIBRARY_DIR "${OpenVR_LIBRARY}" DIRECTORY)
 
     if (NOT TARGET OpenVR::API)
-        add_library(OpenVR::API SHARED IMPORTED)
         if (WIN32)
+            add_library(OpenVR::API SHARED IMPORTED)
             set_target_properties(OpenVR::API
                 PROPERTIES
                     IMPORTED_IMPLIB "${OpenVR_LIBRARY}"
                     IMPORTED_LOCATION "${OpenVR_BINARY}"
                     INTERFACE_INCLUDE_DIRECTORIES "${OpenVR_INCLUDE_DIR}")
+        elseif (CMAKE_SYSTEM_NAME MATCHES "Linux")
+            # Link by name/search path so the executable does not embed an absolute OpenVR path.
+            add_library(OpenVR::API INTERFACE IMPORTED)
+            set_target_properties(OpenVR::API
+                PROPERTIES
+                    INTERFACE_INCLUDE_DIRECTORIES "${OpenVR_INCLUDE_DIR}"
+                    INTERFACE_LINK_DIRECTORIES "${OpenVR_LIBRARY_DIR}"
+                    INTERFACE_LINK_LIBRARIES "openvr_api")
         else()
+            add_library(OpenVR::API SHARED IMPORTED)
             set_target_properties(OpenVR::API
                 PROPERTIES
                     IMPORTED_LOCATION "${OpenVR_LIBRARY}"

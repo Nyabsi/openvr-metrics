@@ -62,6 +62,14 @@ endif()
 
 add_executable(metrics_overlay ${SOURCES})
 
+if (UNIX AND NOT APPLE)
+    set_target_properties(metrics_overlay PROPERTIES
+        BUILD_RPATH "$ORIGIN"
+        INSTALL_RPATH "$ORIGIN"
+        INSTALL_RPATH_USE_LINK_PATH FALSE
+    )
+endif()
+
 target_include_directories(metrics_overlay PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
 # Windows executable icon
@@ -92,6 +100,12 @@ set(CUSTOM_OUTPUT_DIR "${CMAKE_SOURCE_DIR}/bin")
 
 add_custom_target(metrics_overlay_resources)
 
+if (WIN32)
+    set(OPENVR_RUNTIME_BINARY "$<TARGET_FILE:OpenVR::API>")
+else()
+    set(OPENVR_RUNTIME_BINARY "${OpenVR_BINARY}")
+endif()
+
 add_custom_command(
     TARGET metrics_overlay_resources POST_BUILD
     COMMENT "Copying Resources"
@@ -104,6 +118,6 @@ add_custom_command(
     TARGET metrics_overlay POST_BUILD
     COMMENT "Copying Executable and DLLs"
     COMMAND ${CMAKE_COMMAND} -E copy -t ${CUSTOM_OUTPUT_DIR} $<TARGET_FILE:metrics_overlay>
-    COMMAND ${CMAKE_COMMAND} -E copy -t ${CUSTOM_OUTPUT_DIR} $<TARGET_FILE:OpenVR::API>
+    COMMAND ${CMAKE_COMMAND} -E copy -t ${CUSTOM_OUTPUT_DIR} ${OPENVR_RUNTIME_BINARY}
     COMMAND_EXPAND_LISTS
 )
