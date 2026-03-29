@@ -995,8 +995,9 @@ auto ControllerOverlay::Update() -> void
         bool wireless_detected = false;
 
         // TODO: 15.0f is arbitrary Wireless heurestic, this probably should be looked onto.
-        if (wireless_latency_ >= 15.0f)
-            wireless_detected = true;
+	// causes issues with some wired headsets i.e., Varjo, StarVR and so on... Will be removed.
+        //if (wireless_latency_ >= 15.0f)
+        //    wireless_detected = true;
 
         if (gpu_frame_times_[frame_index_].flags != 0 &&
             static_cast<int>(gpu_frame_time_ms_) > static_cast<int>(frame_time_))
