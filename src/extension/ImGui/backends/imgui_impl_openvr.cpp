@@ -25,8 +25,9 @@
 #include <windows.h>
 #else
 #include <time.h>
-#include <math.h>
 #endif
+
+#include <math.h>
 
 struct ImGui_ImplOpenVR_Data {
     uintptr_t handle;

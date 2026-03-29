@@ -1,10 +1,6 @@
 cmake_minimum_required(VERSION 3.26)
 
-if (POLICY CMP0141)
-  cmake_policy(SET CMP0141 NEW)
-  set(CMAKE_MSVC_DEBUG_INFORMATION_FORMAT "$<IF:$<AND:$<C_COMPILER_ID:MSVC>,$<CXX_COMPILER_ID:MSVC>>,$<$<CONFIG:Debug,RelWithDebInfo>:EditAndContinue>,$<$<CONFIG:Debug,RelWithDebInfo>:ProgramDatabase>>")
-endif()
-
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/")
 
 project(openvr_metrics)
@@ -79,16 +75,25 @@ endif()
 
 target_compile_features(metrics_overlay PUBLIC cxx_std_23)
 
-target_link_libraries(metrics_overlay
-    PRIVATE
+if (WIN32)
+    target_link_libraries(metrics_overlay PRIVATE
         OpenVR::API
         ImGui
         glm::glm
         nlohmann_json::nlohmann_json
-)
+        pdh
+	dxgi
+    )
+else()
+    target_link_libraries(metrics_overlay PRIVATE
+        OpenVR::API
+        ImGui
+        glm::glm
+        nlohmann_json::nlohmann_json
+    )
+endif()
 
 target_compile_options(metrics_overlay PRIVATE
-    $<$<CXX_COMPILER_ID:MSVC>:/W4 /WX>
     $<$<CXX_COMPILER_ID:GNU,Clang,AppleClang>:-Wall -Wextra -Wpedantic -Werror>
 )
 

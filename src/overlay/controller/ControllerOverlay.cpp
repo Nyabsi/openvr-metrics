@@ -1,8 +1,6 @@
 ﻿#include "ControllerOverlay.h"
 
 #include <algorithm>
-#include <map>
-#include <thread>
 #include <ranges>
 #include <math.h>
 
@@ -619,11 +617,8 @@ auto ControllerOverlay::Render() -> bool
                                 return (a.flags & f) != 0;
                             });
 
-                            int shown = 0;
                             for (const auto& alert : filtered)
                             {
-                                shown++;
-
                                 std::string count_str = (alert.count > 1) ? " (x" + std::to_string(alert.count) + ")" : "";
                                 ImGui::TextWrapped("%s%s", alert.message.c_str(), count_str.c_str());
 
@@ -658,7 +653,7 @@ auto ControllerOverlay::Render() -> bool
                         ImGui::TableNextRow();
 
                         ImGui::TableSetColumnIndex(0);
-                        ImGui::Text("%lu", device.device_id);
+                        ImGui::Text("%llu", device.device_id);
 
                         ImGui::TableSetColumnIndex(1);
                         ImGui::Text("%s", device.device_label.c_str());
@@ -783,11 +778,11 @@ auto ControllerOverlay::UpdateDisplaySettings(bool init) -> void
     color_brightness_ = std::clamp(color_brightness_, 10.0f, 300.0f);
 
     const bool post_processing_changed =
-        (prev_color_temperature_ != color_temperature_) ||
-        (prev_color_temp_ != color_temp_) ||
-        (prev_color_brightness_ != color_brightness_) ||
-        (prev_colour_mask_ != colour_mask_) &&
-        !init;
+        ((prev_color_temperature_ != color_temperature_) ||
+         (prev_color_temp_ != color_temp_) ||
+         (prev_color_brightness_ != color_brightness_) ||
+         (prev_colour_mask_ != colour_mask_)
+         ) && !init;
 
     if (!post_processing_changed) {
         return;
