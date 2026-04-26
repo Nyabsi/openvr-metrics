@@ -94,7 +94,11 @@ private:
 
     Overlay_DisplayMode display_mode_;
     OverlayTransform transform_;
-    
+
+    bool window_shown_;
+    bool window_minimized_;
+    bool keyboard_active_;
+
     float overlay_scale_;
     int handedness_;
     int position_;
@@ -107,8 +111,8 @@ private:
     float cpu_frame_time_ms_;
     float effective_cpu_frame_time_ms_;
     float gpu_frame_time_ms_;
-    float cpu_frame_time_sample_;
-    float gpu_frame_time_avg_;
+	float cpu_frame_time_sample_;
+	float gpu_frame_time_avg_;
     float current_fps_;
     uint8_t frame_index_;   // no HMD is >=255 (Refresh Rate) this is an safe assumption for sake of performance.
     uint32_t bottleneck_flags_;

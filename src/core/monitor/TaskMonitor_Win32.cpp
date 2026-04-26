@@ -7,8 +7,12 @@
 #include <sstream>
 #include <vector>
 #include <dxgi1_6.h>
+#include <thread>
 
 #include <config.hpp>
+
+#pragma comment(lib, "pdh.lib")
+#pragma comment(lib, "dxgi.lib")
 
 TaskMonitor::TaskMonitor()
 {
@@ -187,7 +191,7 @@ auto TaskMonitor::mapProcessesToPid(PDH_HCOUNTER counter) -> void
     DWORD itemCount = 0;
 
     result = PdhGetFormattedCounterArrayA(counter, PDH_FMT_LARGE, &bufferSize, &itemCount, nullptr);
-    if (result != static_cast<PDH_STATUS>(PDH_MORE_DATA))
+    if (result != PDH_MORE_DATA)
         throw std::runtime_error("Failed to get formatted counter array size (Dedicated Usage) through PdhGetFormattedCounterArrayA");
 
     std::vector<std::byte> buffer(bufferSize);
@@ -260,14 +264,14 @@ auto TaskMonitor::calculateGpuMetricFromCounter(PDH_HCOUNTER counter, GpuMetric_
         case GpuMetric_Dedicated_Vram:
             gpu.memory.dedicated_vram_usage = static_cast<size_t>(value);
             break;
+
         case GpuMetric_Shared_Vram:
             gpu.memory.shared_vram_usage = static_cast<size_t>(value);
             break;
+
         case GpuMetric_Engine_Utilization:
             eng.utilization_percentage = static_cast<float>(value);
             break;
-        default:
-	    break;
         }
     };
 
@@ -275,7 +279,7 @@ auto TaskMonitor::calculateGpuMetricFromCounter(PDH_HCOUNTER counter, GpuMetric_
     DWORD itemCount = 0;
 
     result = PdhGetFormattedCounterArrayA(counter, PDH_FMT_LARGE, &bufferSize, &itemCount, nullptr);
-    if (result != static_cast<PDH_STATUS>(PDH_MORE_DATA))
+    if (result != PDH_MORE_DATA)
         throw std::runtime_error("Failed to get formatted counter array size (Dedicated Usage) through PdhGetFormattedCounterArrayA");
 
     std::vector<std::byte> buffer(bufferSize);
@@ -297,7 +301,7 @@ auto TaskMonitor::calculateCpuMetricFromCounter(PDH_HCOUNTER counter, CpuMetric_
     DWORD itemCount = 0;
 
     result = PdhGetFormattedCounterArrayA(counter, PDH_FMT_DOUBLE | PDH_FMT_NOCAP100, &bufferSize, &itemCount, nullptr);
-    if (result != static_cast<PDH_STATUS>(PDH_MORE_DATA))
+    if (result != PDH_MORE_DATA)
         throw std::runtime_error("Failed to get formatted counter array size (Dedicated Usage) through PdhGetFormattedCounterArrayA");
 
     std::vector<std::byte> buffer(bufferSize);
@@ -319,8 +323,6 @@ auto TaskMonitor::calculateCpuMetricFromCounter(PDH_HCOUNTER counter, CpuMetric_
                 case CpuMetric_Total_Time:
                     process_list_[pid].cpu.total_cpu_usage = items[i].FmtValue.doubleValue;
                     break;
-                default:
-		    break;
                 }
             }
         }
@@ -335,7 +337,7 @@ auto TaskMonitor::calculateMemoryMetricFromCounter(PDH_HCOUNTER counter) -> void
     DWORD itemCount = 0;
 
     result = PdhGetFormattedCounterArrayA(counter, PDH_FMT_DOUBLE | PDH_FMT_NOCAP100, &bufferSize, &itemCount, nullptr);
-    if (result != static_cast<PDH_STATUS>(PDH_MORE_DATA))
+    if (result != PDH_MORE_DATA)
         throw std::runtime_error("Failed to get formatted counter array size (Working Set) through PdhGetFormattedCounterArrayA");
 
     std::vector<std::byte> buffer(bufferSize);

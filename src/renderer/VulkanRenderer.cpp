@@ -1,5 +1,7 @@
 #include "VulkanRenderer.h"
 
+#include <ranges>
+
 #include <helper/VulkanHelper.h>
 
 #include <imgui.h>
@@ -144,13 +146,12 @@ auto VulkanRenderer::Initialize()  -> void
 
     vkGetPhysicalDeviceQueueFamilyProperties(vulkan_physical_device_, &family_prop_count, queues_properties.data());
 
-    size_t idx = {};    
-    for (auto property : queues_properties) {
-       if (property.queueFlags & VK_QUEUE_GRAPHICS_BIT) {
+    for (auto [idx, property] : std::views::enumerate(queues_properties))
+    {
+        if (property.queueFlags & VK_QUEUE_GRAPHICS_BIT) {
             vulkan_queue_family_ = static_cast<uint32_t>(idx);
             break;
-       }
-       ++idx;
+        }
     }
 
     queues_properties.clear();

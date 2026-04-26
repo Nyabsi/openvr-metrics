@@ -35,4 +35,3 @@ cmake-build-*
 .idea/
 .vs/
 bin/
-build/

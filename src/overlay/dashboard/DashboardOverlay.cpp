@@ -290,7 +290,7 @@ auto DashboardOverlay::Render()-> bool
             ImGui::TableNextRow();
 
             ImGui::TableSetColumnIndex(0);
-            ImGui::Text("%u", row.pid);
+            ImGui::Text("%llu", row.pid);
 
             ImGui::TableSetColumnIndex(1);
             ImGui::Text("%s", row.info.process_name.c_str());
